@@ -360,7 +360,7 @@ export function getProcessedPixels<T extends tf.Tensor3D | tf.Tensor4D>(
   if (processFn) {
     return processFn(upscaledTensor);
   }
-  return upscaledTensor.clone();
+  return <T>upscaledTensor.clone();
 }
 
 // if given a tensor, we copy it; otherwise, we pass input through unadulterated
