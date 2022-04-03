@@ -1,6 +1,5 @@
 import Upscaler from 'upscaler';
 import img from './flower.png';
-
 const upscaler = new Upscaler();
 
 const target = document.getElementById('target');

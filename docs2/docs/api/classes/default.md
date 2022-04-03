@@ -22,7 +22,7 @@ Constructor
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:50](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L50)
+[packages/upscalerjs/src/upscaler.ts:50](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L50)
 
 ## Methods
 
@@ -36,7 +36,7 @@ Constructor
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:91](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L91)
+[packages/upscalerjs/src/upscaler.ts:91](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L91)
 
 ___
 
@@ -50,7 +50,7 @@ ___
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:58](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L58)
+[packages/upscalerjs/src/upscaler.ts:58](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L58)
 
 ___
 
@@ -64,7 +64,7 @@ ___
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:63](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L63)
+[packages/upscalerjs/src/upscaler.ts:63](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L63)
 
 ___
 
@@ -78,7 +78,7 @@ ___
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:87](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L87)
+[packages/upscalerjs/src/upscaler.ts:87](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L87)
 
 ___
 
@@ -111,7 +111,7 @@ an upscaled image
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:75](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L75)
+[packages/upscalerjs/src/upscaler.ts:75](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L75)
 
 ___
 
@@ -131,4 +131,4 @@ ___
 
 #### Defined in
 
-[packages/upscalerjs/src/upscaler.ts:64](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscaler.ts#L64)
+[packages/upscalerjs/src/upscaler.ts:64](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscaler.ts#L64)

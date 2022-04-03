@@ -1,5 +1,6 @@
 ---
 sidebar_position: 11
+category: node
 ---
 # Node Custom Model Example
 

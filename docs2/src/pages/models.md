@@ -14,7 +14,7 @@ The code used to train the models can be found at [github.com/idealo/image-super
 
 First, install the models:
 
-```bash
+```
 npm install @upscalerjs/esrgan
 ```
 

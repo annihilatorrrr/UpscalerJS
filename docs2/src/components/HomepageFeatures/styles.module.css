@@ -1,4 +1,5 @@
 .features {
+  background-color: var(--ifm-color-off-primary);
   display: flex;
   align-items: center;
   padding: 2rem 0;

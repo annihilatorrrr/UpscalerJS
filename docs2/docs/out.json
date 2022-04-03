@@ -1,0 +1,845 @@
+{
+	"id": 0,
+	"name": "upscaler",
+	"kind": 1,
+	"kindString": "Project",
+	"flags": {},
+	"comment": {
+		"shortText": "API documentation for UpscalerJS.",
+		"text": "Instantiate an Upscaler with:\n\n```typescript\nimport Upscaler from 'upscaler';\nconst upscaler = new Upscaler();\nupscaler.upscale(img).then(src => {\n  // display the src\n});\n```\n"
+	},
+	"originalName": "",
+	"children": [
+		{
+			"id": 1,
+			"name": "AbortError",
+			"kind": 128,
+			"kindString": "Class",
+			"flags": {},
+			"children": [
+				{
+					"id": 11,
+					"name": "constructor",
+					"kind": 512,
+					"kindString": "Constructor",
+					"flags": {},
+					"signatures": [
+						{
+							"id": 12,
+							"name": "new AbortError",
+							"kind": 16384,
+							"kindString": "Constructor signature",
+							"flags": {},
+							"parameters": [
+								{
+									"id": 13,
+									"name": "message",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									}
+								}
+							],
+							"type": {
+								"type": "reference",
+								"id": 1,
+								"name": "AbortError"
+							},
+							"inheritedFrom": {
+								"type": "reference",
+								"name": "Error.constructor"
+							}
+						}
+					],
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.constructor"
+					}
+				},
+				{
+					"id": 14,
+					"name": "message",
+					"kind": 1024,
+					"kindString": "Property",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscale.ts",
+							"line": 24,
+							"character": 2
+						}
+					],
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					},
+					"defaultValue": "'The upscale request received an abort signal'",
+					"overwrites": {
+						"type": "reference",
+						"name": "Error.message"
+					}
+				},
+				{
+					"id": 15,
+					"name": "name",
+					"kind": 1024,
+					"kindString": "Property",
+					"flags": {
+						"isExternal": true
+					},
+					"sources": [
+						{
+							"fileName": "docs2/node_modules/typescript/lib/lib.es5.d.ts",
+							"line": 1022,
+							"character": 4
+						}
+					],
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					},
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.name"
+					}
+				},
+				{
+					"id": 16,
+					"name": "stack",
+					"kind": 1024,
+					"kindString": "Property",
+					"flags": {
+						"isExternal": true,
+						"isOptional": true
+					},
+					"sources": [
+						{
+							"fileName": "docs2/node_modules/typescript/lib/lib.es5.d.ts",
+							"line": 1024,
+							"character": 4
+						}
+					],
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					},
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.stack"
+					}
+				},
+				{
+					"id": 10,
+					"name": "stackTraceLimit",
+					"kind": 1024,
+					"kindString": "Property",
+					"flags": {
+						"isStatic": true,
+						"isExternal": true
+					},
+					"sources": [
+						{
+							"fileName": "node_modules/@types/node/globals.d.ts",
+							"line": 13,
+							"character": 4
+						}
+					],
+					"type": {
+						"type": "intrinsic",
+						"name": "number"
+					},
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.stackTraceLimit"
+					}
+				},
+				{
+					"id": 2,
+					"name": "captureStackTrace",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {
+						"isStatic": true,
+						"isExternal": true
+					},
+					"signatures": [
+						{
+							"id": 3,
+							"name": "captureStackTrace",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {
+								"isExternal": true
+							},
+							"comment": {
+								"shortText": "Create .stack property on a target object"
+							},
+							"parameters": [
+								{
+									"id": 4,
+									"name": "targetObject",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {
+										"isExternal": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "object"
+									}
+								},
+								{
+									"id": 5,
+									"name": "constructorOpt",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {
+										"isExternal": true,
+										"isOptional": true
+									},
+									"type": {
+										"type": "reference",
+										"qualifiedName": "Function",
+										"package": "typescript",
+										"name": "Function"
+									}
+								}
+							],
+							"type": {
+								"type": "intrinsic",
+								"name": "void"
+							},
+							"inheritedFrom": {
+								"type": "reference",
+								"name": "Error.captureStackTrace"
+							}
+						}
+					],
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.captureStackTrace"
+					}
+				},
+				{
+					"id": 6,
+					"name": "prepareStackTrace",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {
+						"isStatic": true,
+						"isExternal": true,
+						"isOptional": true
+					},
+					"sources": [
+						{
+							"fileName": "node_modules/@types/node/globals.d.ts",
+							"line": 11,
+							"character": 4
+						}
+					],
+					"signatures": [
+						{
+							"id": 7,
+							"name": "prepareStackTrace",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {
+								"isExternal": true
+							},
+							"comment": {
+								"shortText": "Optional override for formatting stack traces",
+								"tags": [
+									{
+										"tag": "see",
+										"text": "https://github.com/v8/v8/wiki/Stack%20Trace%20API#customizing-stack-traces\n"
+									}
+								]
+							},
+							"parameters": [
+								{
+									"id": 8,
+									"name": "err",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {
+										"isExternal": true
+									},
+									"type": {
+										"type": "reference",
+										"qualifiedName": "Error",
+										"package": "typescript",
+										"name": "Error"
+									}
+								},
+								{
+									"id": 9,
+									"name": "stackTraces",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {
+										"isExternal": true
+									},
+									"type": {
+										"type": "array",
+										"elementType": {
+											"type": "reference",
+											"qualifiedName": "NodeJS.CallSite",
+											"package": "@types/node",
+											"name": "CallSite"
+										}
+									}
+								}
+							],
+							"type": {
+								"type": "intrinsic",
+								"name": "any"
+							},
+							"inheritedFrom": {
+								"type": "reference",
+								"name": "Error.prepareStackTrace"
+							}
+						}
+					],
+					"inheritedFrom": {
+						"type": "reference",
+						"name": "Error.prepareStackTrace"
+					}
+				}
+			],
+			"groups": [
+				{
+					"title": "Constructors",
+					"kind": 512,
+					"children": [
+						11
+					]
+				},
+				{
+					"title": "Properties",
+					"kind": 1024,
+					"children": [
+						14,
+						15,
+						16,
+						10
+					]
+				},
+				{
+					"title": "Methods",
+					"kind": 2048,
+					"children": [
+						2,
+						6
+					]
+				}
+			],
+			"sources": [
+				{
+					"fileName": "packages/upscalerjs/src/upscale.ts",
+					"line": 23,
+					"character": 13
+				}
+			],
+			"extendedTypes": [
+				{
+					"type": "reference",
+					"qualifiedName": "Error",
+					"package": "typescript",
+					"name": "Error"
+				}
+			]
+		},
+		{
+			"id": 17,
+			"name": "default",
+			"kind": 128,
+			"kindString": "Class",
+			"flags": {},
+			"children": [
+				{
+					"id": 18,
+					"name": "constructor",
+					"kind": 512,
+					"kindString": "Constructor",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 50,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 19,
+							"name": "new default",
+							"kind": 16384,
+							"kindString": "Constructor signature",
+							"flags": {},
+							"comment": {
+								"shortText": "Constructor"
+							},
+							"parameters": [
+								{
+									"id": 20,
+									"name": "opts",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {},
+									"type": {
+										"type": "reference",
+										"name": "IUpscalerOptions"
+									},
+									"defaultValue": "{}"
+								}
+							],
+							"type": {
+								"type": "reference",
+								"id": 17,
+								"name": "Upscaler"
+							}
+						}
+					]
+				},
+				{
+					"id": 46,
+					"name": "abort",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 91,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 47,
+							"name": "abort",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"type": {
+								"type": "intrinsic",
+								"name": "void"
+							}
+						}
+					]
+				},
+				{
+					"id": 27,
+					"name": "dispose",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 58,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 28,
+							"name": "dispose",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"type": {
+								"type": "reference",
+								"typeArguments": [
+									{
+										"type": "intrinsic",
+										"name": "void"
+									}
+								],
+								"qualifiedName": "Promise",
+								"package": "typescript",
+								"name": "Promise"
+							}
+						}
+					]
+				},
+				{
+					"id": 29,
+					"name": "getModel",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 63,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 30,
+							"name": "getModel",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"type": {
+								"type": "reference",
+								"typeArguments": [
+									{
+										"type": "reflection",
+										"declaration": {
+											"id": 31,
+											"name": "__type",
+											"kind": 65536,
+											"kindString": "Type literal",
+											"flags": {},
+											"children": [
+												{
+													"id": 32,
+													"name": "model",
+													"kind": 1024,
+													"kindString": "Property",
+													"flags": {},
+													"sources": [
+														{
+															"fileName": "packages/upscalerjs/src/upscaler.ts",
+															"line": 39,
+															"character": 4
+														}
+													],
+													"type": {
+														"type": "reference",
+														"qualifiedName": "LayersModel",
+														"package": "@tensorflow/tfjs-layers",
+														"name": "LayersModel"
+													}
+												},
+												{
+													"id": 33,
+													"name": "modelDefinition",
+													"kind": 1024,
+													"kindString": "Property",
+													"flags": {},
+													"sources": [
+														{
+															"fileName": "packages/upscalerjs/src/upscaler.ts",
+															"line": 40,
+															"character": 4
+														}
+													],
+													"type": {
+														"type": "reference",
+														"name": "IModelDefinition"
+													}
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"kind": 1024,
+													"children": [
+														32,
+														33
+													]
+												}
+											]
+										}
+									}
+								],
+								"qualifiedName": "Promise",
+								"package": "typescript",
+								"name": "Promise"
+							}
+						}
+					]
+				},
+				{
+					"id": 44,
+					"name": "getModelDefinitions",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 87,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 45,
+							"name": "getModelDefinitions",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"type": {
+								"type": "reference",
+								"typeArguments": [
+									{
+										"type": "reference",
+										"name": "ModelDefinitions"
+									}
+								],
+								"qualifiedName": "Promise",
+								"package": "typescript",
+								"name": "Promise"
+							}
+						}
+					]
+				},
+				{
+					"id": 37,
+					"name": "upscale",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 75,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 38,
+							"name": "upscale",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"comment": {
+								"shortText": "Upscales a given image.",
+								"returns": "an upscaled image\n"
+							},
+							"typeParameter": [
+								{
+									"id": 39,
+									"name": "P",
+									"kind": 131072,
+									"kindString": "Type parameter",
+									"flags": {},
+									"type": {
+										"type": "reference",
+										"typeArguments": [
+											{
+												"type": "reference",
+												"id": 40,
+												"name": "O"
+											},
+											{
+												"type": "reference",
+												"id": 41,
+												"name": "PO"
+											}
+										],
+										"name": "Progress"
+									}
+								},
+								{
+									"id": 40,
+									"name": "O",
+									"kind": 131072,
+									"kindString": "Type parameter",
+									"flags": {},
+									"type": {
+										"type": "reference",
+										"name": "ResultFormat"
+									},
+									"default": {
+										"type": "literal",
+										"value": "src"
+									}
+								},
+								{
+									"id": 41,
+									"name": "PO",
+									"kind": 131072,
+									"kindString": "Type parameter",
+									"flags": {},
+									"type": {
+										"type": "reference",
+										"name": "ResultFormat"
+									},
+									"default": {
+										"type": "intrinsic",
+										"name": "undefined"
+									}
+								}
+							],
+							"parameters": [
+								{
+									"id": 42,
+									"name": "image",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {},
+									"comment": {
+										"shortText": "the image to upscale."
+									},
+									"type": {
+										"type": "reference",
+										"name": "GetImageAsTensorInput"
+									}
+								},
+								{
+									"id": 43,
+									"name": "options",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {},
+									"comment": {
+										"shortText": "a set of upscaling arguments"
+									},
+									"type": {
+										"type": "reference",
+										"typeArguments": [
+											{
+												"type": "reference",
+												"id": 39,
+												"name": "P"
+											},
+											{
+												"type": "reference",
+												"id": 40,
+												"name": "O"
+											},
+											{
+												"type": "reference",
+												"id": 41,
+												"name": "PO"
+											}
+										],
+										"name": "UpscaleArgs"
+									},
+									"defaultValue": "{}"
+								}
+							],
+							"type": {
+								"type": "reference",
+								"typeArguments": [
+									{
+										"type": "reference",
+										"typeArguments": [
+											{
+												"type": "reference",
+												"id": 40,
+												"name": "O"
+											}
+										],
+										"name": "UpscaleResponse"
+									}
+								],
+								"qualifiedName": "Promise",
+								"package": "typescript",
+								"name": "Promise"
+							}
+						}
+					]
+				},
+				{
+					"id": 34,
+					"name": "warmup",
+					"kind": 2048,
+					"kindString": "Method",
+					"flags": {},
+					"sources": [
+						{
+							"fileName": "packages/upscalerjs/src/upscaler.ts",
+							"line": 64,
+							"character": 2
+						}
+					],
+					"signatures": [
+						{
+							"id": 35,
+							"name": "warmup",
+							"kind": 4096,
+							"kindString": "Call signature",
+							"flags": {},
+							"parameters": [
+								{
+									"id": 36,
+									"name": "warmupSizes",
+									"kind": 32768,
+									"kindString": "Parameter",
+									"flags": {},
+									"type": {
+										"type": "array",
+										"elementType": {
+											"type": "reference",
+											"name": "WarmupSizes"
+										}
+									}
+								}
+							],
+							"type": {
+								"type": "reference",
+								"typeArguments": [
+									{
+										"type": "intrinsic",
+										"name": "void"
+									}
+								],
+								"qualifiedName": "Promise",
+								"package": "typescript",
+								"name": "Promise"
+							}
+						}
+					]
+				}
+			],
+			"groups": [
+				{
+					"title": "Constructors",
+					"kind": 512,
+					"children": [
+						18
+					]
+				},
+				{
+					"title": "Methods",
+					"kind": 2048,
+					"children": [
+						46,
+						27,
+						29,
+						44,
+						37,
+						34
+					]
+				}
+			],
+			"sources": [
+				{
+					"fileName": "packages/upscalerjs/src/upscaler.ts",
+					"line": 30,
+					"character": 13
+				}
+			]
+		}
+	],
+	"groups": [
+		{
+			"title": "Classes",
+			"kind": 128,
+			"children": [
+				1,
+				17
+			]
+		}
+	],
+	"sources": [
+		{
+			"fileName": "packages/upscalerjs/src/index.ts",
+			"line": 16,
+			"character": 0
+		}
+	]
+}

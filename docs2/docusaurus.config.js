@@ -25,7 +25,8 @@ const config = {
         entryPoints: ['../packages/upscalerjs/src/index.ts'],
         tsconfig: '../packages/upscalerjs/tsconfig.json',
         watch: process.env.TYPEDOC_WATCH,
-        out: 'api',
+        // out: 'api',
+        json: 'api',
         readme: 'none',
         sidebar: {
           categoryLabel: 'API',

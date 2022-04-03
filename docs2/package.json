@@ -3,10 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "copy-examples": "ts-node scripts/copy-examples.ts",
-    "copy-examples:watch": "watch \"yarn copy-examples\" ../examples",
+    "copy-examples": "rimraf ./docs/usage/**/*.md && ts-node scripts/copy-examples.ts",
+    "copy-examples:watch": "watch \"ts-node scripts/copy-examples.ts\" ../examples",
+    "build-api-docs": "ts-node scripts/build-api-docs.ts",
     "docusaurus": "docusaurus",
-    "start": "TYPEDOC_WATCH=true concurrently \"docusaurus start\" \"yarn copy-examples:watch\"",
+    "start": "TYPEDOC_WATCH=true yarn copy-examples && concurrently \"docusaurus start\" \"yarn copy-examples:watch\"",
     "build": "yarn copy-examples && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -28,6 +29,7 @@
     "@tsconfig/docusaurus": "^1.0.5",
     "concurrently": "^7.0.0",
     "ts-node": "^10.7.0",
+    "typedoc": "^0.22.13",
     "typescript": "^4.6.3",
     "watch": "^1.0.2"
   },

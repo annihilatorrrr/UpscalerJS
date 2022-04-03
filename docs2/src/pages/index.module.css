@@ -5,9 +5,27 @@
 
 .heroBanner {
   padding: 4rem 0;
-  text-align: center;
+  text-align: left;
   position: relative;
   overflow: hidden;
+
+}
+.heroBanner code {
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.5);
+  padding: 5px 40px;
+  border-radius: 10px;
+  margin-top: 20px;
+  display: inline-block;
+}
+
+.heroBanner [data-theme='dark'] code {
+  border-color: rgba(255,255,255,0.5);
+}
+
+.heroBanner h2 {
+  font-size: 140% !important;
+  margin: 0 !important;
 }
 
 @media screen and (max-width: 996px) {
@@ -19,5 +37,12 @@
 .buttons {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+}
+
+.buttons a {
+  margin-right: 20px;
+  padding: 20px 40px;
+  border-radius: 20px;
+  /* background-color: transparent; */
 }

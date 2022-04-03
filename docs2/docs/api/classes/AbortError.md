@@ -44,7 +44,7 @@ Error.message
 
 #### Defined in
 
-[packages/upscalerjs/src/upscale.ts:24](https://github.com/thekevinscott/UpscalerJS/blob/377c165/packages/upscalerjs/src/upscale.ts#L24)
+[packages/upscalerjs/src/upscale.ts:24](https://github.com/thekevinscott/UpscalerJS/blob/4f75366/packages/upscalerjs/src/upscale.ts#L24)
 
 ___
 

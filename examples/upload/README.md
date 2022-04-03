@@ -6,8 +6,6 @@ sidebar_position: 1
 
 Demonstrates how to upload an image for upscaling via Upscaler.js.
 
-[See this example live on codesandbox.com](https://githubbox.com/thekevinscott/upscalerjs/tree/main/examples/upload).
-
 ## Embedded Version
 
 <iframe src="https://codesandbox.io/embed/github/thekevinscott/upscalerjs/tree/main/examples/upload?fontsize=14&hidenavigation=1&theme=dark"
@@ -17,4 +15,6 @@ Demonstrates how to upload an image for upscaling via Upscaler.js.
      sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
    ></iframe>
 
-## Overview
+[See this example live on codesandbox.com](https://githubbox.com/thekevinscott/upscalerjs/tree/main/examples/upload).
+
+## Tutorial
