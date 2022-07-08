@@ -15,29 +15,34 @@
  */
 import { tf, } from './dependencies.generated';
 import {
-  IUpscalerOptions,
+  UpscalerOptions,
   UpscaleArgs,
   WarmupSizes,
-  IModelDefinition,
+  ModelDefinition,
   ResultFormat,
   Progress,
 } from './types';
-import loadModel, { getModelDefinitions, } from './loadModel';
+import { loadModel, } from './loadModel.generated';
 import warmup from './warmup';
 import { cancellableUpscale, } from './upscale';
 import type { GetImageAsTensorInput, } from './image.generated';
+// import ESRGANSlim from '@upscalerjs/esrgan-slim';
+
+// TODO: Why does eslint fail to type this correctly?
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// const DEFAULT_MODEL: ModelDefinition = ESRGANSlim;
 
 export class Upscaler {
   /**
    * @hidden
    */
-  _opts: IUpscalerOptions;
+  _opts: UpscalerOptions;
   /**
    * @hidden
    */
   _model: Promise<{
     model: tf.LayersModel;
-    modelDefinition: IModelDefinition;
+    modelDefinition: ModelDefinition;
   }>;
   /**
    * @hidden
@@ -47,11 +52,12 @@ export class Upscaler {
   /**
    * Constructor
    */
-  constructor(opts: IUpscalerOptions = {}) {
+  constructor(opts: UpscalerOptions = {}) {
     this._opts = {
       ...opts,
     };
-    this._model = loadModel(this._opts);
+    this._model = loadModel(this._opts.model);
+    // this._model = loadModel(this._opts.model || DEFAULT_MODEL);
     void warmup(this._model, this._opts.warmupSizes || []);
   }
 
@@ -82,10 +88,6 @@ export class Upscaler {
       modelDefinition,
       signal: this.#abortController.signal,
     });
-  };
-
-  getModelDefinitions = async () => {
-    return await getModelDefinitions();
   };
 
   abort = () => {

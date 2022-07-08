@@ -1,7 +1,7 @@
 import { tf, } from './dependencies.generated';
 import type { 
   UpscaleArgs, 
-  IModelDefinition, 
+  ModelDefinition, 
   ProcessFn, 
   ResultFormat, 
   UpscaleResponse, 
@@ -235,7 +235,7 @@ export function concatTensors<T extends tf.Tensor3D | tf.Tensor4D> (tensors: Arr
   const concatenatedTensor = tf.concat(tensors, axis);
   tensors.forEach(tensor => tensor.dispose());
   return concatenatedTensor;
-};
+}
 
 export async function* predict<P extends Progress<O, PO>, O extends ResultFormat = 'src', PO extends ResultFormat = undefined>(
   pixels: tf.Tensor4D,
@@ -351,9 +351,9 @@ export async function* predict<P extends Progress<O, PO>, O extends ResultFormat
     /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
     return pred.squeeze() as tf.Tensor3D;
   });
-};
+}
 
-export function getProcessedPixels<T extends tf.Tensor3D | tf.Tensor4D>(
+export function getProcessedPixels<T extends tf.Tensor>(
   upscaledTensor: T,
   processFn?: ProcessFn<T>,
 ): T {
@@ -423,11 +423,11 @@ export async function* upscale<P extends Progress<O, PO>, O extends ResultFormat
   const base64Src = await tensorAsBase64(postprocessedPixels);
   postprocessedPixels.dispose();
   return <UpscaleResponse<O>>base64Src;
-};
+}
 
 interface UpscaleInternalArgs {
   model: tf.LayersModel,
-  modelDefinition: IModelDefinition,
+  modelDefinition: ModelDefinition,
 }
 export async function cancellableUpscale<P extends Progress<O, PO>, O extends ResultFormat = 'src', PO extends ResultFormat = undefined>(
   input: GetImageAsTensorInput,

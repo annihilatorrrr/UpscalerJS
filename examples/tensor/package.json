@@ -1,6 +1,7 @@
 {
-  "name": "tensor",
-  "version": "0.12.1",
+  "name": "@upscalerjs/examples.tensor",
+  "private": true,
+  "version": "1.0.0-beta.0",
   "description": "Demonstration of basic usage of UpscalerJS",
   "main": "index.js",
   "scripts": {
@@ -8,13 +9,14 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.2",
-    "parcel": "1.12.3"
+    "parcel": "2.4.1"
   },
   "author": "Kevin Scott",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs": "^3.13.0",
-    "upscaler": "0.12.1"
+    "@tensorflow/tfjs": "^3.18.0",
+    "seedrandom": "~2.4.3",
+    "upscaler": "1.0.0-beta.0"
   },
   "browserslist": {
     "production": [
