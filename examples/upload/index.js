@@ -14,7 +14,9 @@ const createImage = (targetDiv, src) => {
   return img;
 };
 
-const upscaler = new Upscaler();
+const upscaler = new Upscaler({
+  warmupSizes: [[64, 64]],
+});
 async function handleFiles() {
   info.innerText = "Upscaling...";
   target.innerHTML = "";

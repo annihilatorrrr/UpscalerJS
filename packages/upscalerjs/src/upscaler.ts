@@ -13,12 +13,11 @@
  *
  * @module UpscalerJS
  */
-import { tf, } from './dependencies.generated';
-import {
+import { tf, ESRGANSlim, } from './dependencies.generated';
+import type {
   UpscalerOptions,
   UpscaleArgs,
   WarmupSizes,
-  ModelDefinition,
   ResultFormat,
   Progress,
 } from './types';
@@ -26,11 +25,20 @@ import { loadModel, } from './loadModel.generated';
 import warmup from './warmup';
 import { cancellableUpscale, } from './upscale';
 import type { GetImageAsTensorInput, } from './image.generated';
-// import ESRGANSlim from '@upscalerjs/esrgan-slim';
+import type { ModelDefinitionObjectOrFn, ModelDefinition, } from '@upscalerjs/core';
+import { isModelDefinitionFn, } from './utils';
 
-// TODO: Why does eslint fail to type this correctly?
+// TODO: Why do we need to explicitly cast this to ModelDefinition?
+// For some reason, TS is picking this up as *any* even though in the editor
+// it's defined as ModelDefinition
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-// const DEFAULT_MODEL: ModelDefinition = ESRGANSlim;
+const DEFAULT_MODEL: ModelDefinitionObjectOrFn = ESRGANSlim;
+
+const getModel = (modelDefinition: ModelDefinitionObjectOrFn = DEFAULT_MODEL) => {
+  /* eslint-disable @typescript-eslint/no-unsafe-call */
+  /* eslint-disable @typescript-eslint/no-unsafe-return */
+  return isModelDefinitionFn(modelDefinition) ? modelDefinition(tf) : modelDefinition;
+};
 
 export class Upscaler {
   /**
@@ -56,8 +64,7 @@ export class Upscaler {
     this._opts = {
       ...opts,
     };
-    this._model = loadModel(this._opts.model);
-    // this._model = loadModel(this._opts.model || DEFAULT_MODEL);
+    this._model = loadModel(getModel(this._opts.model));
     void warmup(this._model, this._opts.warmupSizes || []);
   }
 

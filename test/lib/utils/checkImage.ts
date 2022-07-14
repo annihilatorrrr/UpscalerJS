@@ -1,8 +1,7 @@
 import fs from 'fs';
 import pixelmatch from 'pixelmatch';
 import { getFixtureAsBuffer } from './getFixtureAsBuffer';
-import * as _PNG from 'pngjs';
-const { PNG } = _PNG;
+import { PNG } from 'pngjs';
 
 // 0.10 works for browser; 0.12 for node.
 const THRESHOLD = 0.12;
@@ -16,7 +15,11 @@ export const checkImage = (src: string | any, fixtureSrc: string, diffSrc: strin
   if (!src.includes('base64,')) {
     throw new Error(`No "base64," tag found in the incoming src, this may indicate a bad src attribute. src: ${src}`);
   }
-  const upscaledImageBuffer = Buffer.from(src.split('base64,').pop(), 'base64');
+  const partsAfterBase64 = src.split('base64,').pop();
+  if (!partsAfterBase64) {
+    throw new Error(`No data after base64 definition in src: ${src}`);
+  }
+  const upscaledImageBuffer = Buffer.from(partsAfterBase64, 'base64');
   const upscaledImage = PNG.sync.read(upscaledImageBuffer);
   if (upscaledSrc) {
     console.log(`Writing upscaled image to ${upscaledSrc}`)

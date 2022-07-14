@@ -23,11 +23,10 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm liteinstall
 
       - name: 'Lint'
-        working-directory: ./packages/upscalerjs
-        run: 'pnpm run lint'
+        run: 'pnpm lint'
 
   unit-browser:
     name: 'Unit / Browser'
@@ -50,7 +49,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Unit Tests / Jest'
         working-directory: ./packages/upscalerjs
@@ -87,7 +86,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Unit Tests'
         working-directory: ./packages/upscalerjs
@@ -126,7 +125,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Integration Tests'
         run: pnpm test:integration:browserstack --ci
@@ -160,7 +159,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Integration Tests'
         run: pnpm test:integration:browser --ci
@@ -188,7 +187,7 @@ jobs:
           cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Integration Tests'
         run: pnpm test:integration:node --ci
@@ -214,7 +213,7 @@ jobs:
           # cache: 'pnpm'
 
       - name: 'Install dependencies'
-        run: pnpm install
+        run: pnpm install --filter=!"@upscalerjs/examples.*"
 
       - name: 'Memory Leak Tests'
         run: pnpm test:memory-leaks
