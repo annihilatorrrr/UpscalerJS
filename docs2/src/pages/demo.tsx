@@ -7,9 +7,10 @@ export default function Hello() {
       <div
         style={{
           display: 'flex',
+          backgroundColor: 'green',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '70vh',
+          flex: 1,
           fontSize: '20px',
         }}>
           <iframe height="100%" width="100%" src="https://upscaler.ai"></iframe>

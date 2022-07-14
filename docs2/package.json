@@ -8,6 +8,7 @@
     "build-api-docs": "ts-node scripts/build-api-docs.ts",
     "docusaurus": "docusaurus",
     "start": "TYPEDOC_WATCH=true yarn copy-examples && concurrently \"docusaurus start\" \"yarn copy-examples:watch\"",
+    "_start": "TYPEDOC_WATCH=true concurrently \"docusaurus start\" ",
     "build": "yarn copy-examples && docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
@@ -16,8 +17,6 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "2.0.0-beta.18",
-    "@docusaurus/preset-classic": "2.0.0-beta.18",
     "@mdx-js/react": "^1.6.22",
     "clsx": "^1.1.1",
     "prism-react-renderer": "^1.3.1",
@@ -25,6 +24,11 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
+    "@docusaurus/core": "2.0.0-beta.18",
+    "@docusaurus/preset-classic": "2.0.0-beta.18",
+    "docusaurus-plugin-typedoc": "*",
+    "typedoc-plugin-markdown": "*",
+    "docusaurus": "1.14.7",
     "@docusaurus/module-type-aliases": "2.0.0-beta.18",
     "@tsconfig/docusaurus": "^1.0.5",
     "concurrently": "^7.0.0",

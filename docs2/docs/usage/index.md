@@ -5,6 +5,7 @@
 - [Basic Use Case](/docs/usage/Browser/basic)
 - [Cancel Example](/docs/usage/Browser/cancel)
 - [Image Comparisons](/docs/usage/Browser/comparisons)
+- [Model Comparison](/docs/usage/Browser/models)
 - [Patch Sizes Example](/docs/usage/Browser/patch-sizes)
 - [Progress Example](/docs/usage/Browser/progress)
 - [React Demo Example](/docs/usage/Browser/react-demo)
