@@ -8,8 +8,7 @@ import type {
   Progress, 
   MultiArgProgress,
  } from './types';
-import { getImageAsTensor, } from './image.generated';
-import tensorAsBase64 from 'tensor-as-base64';
+import { getImageAsTensor, tensorAsBase64, } from './image.generated';
 import { 
   wrapGenerator, 
   warn, 
@@ -43,7 +42,13 @@ export const WARNING_PROGRESS_WITHOUT_PATCH_SIZE = [
   `For more information, see ${WARNING_PROGRESS_WITHOUT_PATCH_SIZE_URL}.`,
 ].join('\n');
 
-const getWidthAndHeight = (tensor: tf.Tensor3D | tf.Tensor4D) => {
+export const GET_WIDTH_AND_HEIGHT_ERROR = (tensor: tf.Tensor) => new Error(
+  `Invalid shape provided to getWidthAndHeight, expected tensor of rank 3 or 4: ${JSON.stringify(
+    tensor.shape,
+  )}`,
+);
+
+export const getWidthAndHeight = (tensor: tf.Tensor3D | tf.Tensor4D) => {
   if (tensor.shape.length === 4) {
     return tensor.shape.slice(1, 3);
   }
@@ -52,11 +57,7 @@ const getWidthAndHeight = (tensor: tf.Tensor3D | tf.Tensor4D) => {
     return tensor.shape.slice(0, 2);
   }
 
-  throw new Error(
-    `Invalid shape provided to getWidthAndHeight, expected tensor of rank 3 or 4: ${JSON.stringify(
-      tensor.shape,
-    )}`,
-  );
+  throw GET_WIDTH_AND_HEIGHT_ERROR(tensor);
 };
 
 export const getRowsAndColumns = (
@@ -136,6 +137,21 @@ const checkAndAdjustSliceSize = (
   }
 };
 
+export interface GetTensorDimensionsOpts {
+  row: number;
+  col: number;
+  patchSize: number;
+  height: number;
+  width: number;
+  padding?: number;
+}
+
+export const GET_TENSOR_DIMENSION_ERROR_ROW_IS_UNDEFINED = new Error('Row is undefined');
+export const GET_TENSOR_DIMENSION_ERROR_COL_IS_UNDEFINED = new Error('Column is undefined');
+export const GET_TENSOR_DIMENSION_ERROR_PATCH_SIZE_IS_UNDEFINED = new Error('Patch Size is undefined');
+export const GET_TENSOR_DIMENSION_ERROR_HEIGHT_IS_UNDEFINED = new Error('Height is undefined');
+export const GET_TENSOR_DIMENSION_ERROR_WIDTH_IS_UNDEFINED = new Error('Width is undefined');
+
 export const getTensorDimensions = ({
   row,
   col,
@@ -143,30 +159,23 @@ export const getTensorDimensions = ({
   height,
   width,
   padding = 0,
-}: {
-  row: number;
-  col: number;
-  patchSize: number;
-  height: number;
-  width: number;
-  padding?: number;
-}) => {
+}: GetTensorDimensionsOpts) => {
   // non typescript code can call this function, so we add runtime
   // checks to ensure required values are present
   if (row === undefined) {
-    throw new Error('row is undefined');
+    throw GET_TENSOR_DIMENSION_ERROR_ROW_IS_UNDEFINED;
   }
   if (col === undefined) {
-    throw new Error('col is undefined');
+    throw GET_TENSOR_DIMENSION_ERROR_COL_IS_UNDEFINED;
   }
   if (patchSize === undefined) {
-    throw new Error('patchSize is undefined');
+    throw GET_TENSOR_DIMENSION_ERROR_PATCH_SIZE_IS_UNDEFINED;
   }
   if (height === undefined) {
-    throw new Error('height is undefined');
+    throw GET_TENSOR_DIMENSION_ERROR_HEIGHT_IS_UNDEFINED;
   }
   if (width === undefined) {
-    throw new Error('width is undefined');
+    throw GET_TENSOR_DIMENSION_ERROR_WIDTH_IS_UNDEFINED;
   }
   let yPatchSize = patchSize;
   let xPatchSize = patchSize;
@@ -245,6 +254,8 @@ export async function* predict<P extends Progress<O, PO>, O extends ResultFormat
     modelDefinition,
   }: UpscaleInternalArgs
 ): AsyncGenerator<YieldedIntermediaryValue, tf.Tensor3D> {
+  // TODO: Remove this
+  await Promise.resolve();
   const scale = modelDefinition.scale;
 
   if (originalPatchSize && padding === undefined) {
@@ -319,7 +330,7 @@ export async function* predict<P extends Progress<O, PO>, O extends ResultFormat
               (<MultiArgProgress<'tensor'>>progress)(percent, squeezedTensor);
             } else {
               // because we are returning a string, we can safely dispose of our tensor
-              const src = await tensorAsBase64(squeezedTensor);
+              const src = tensorAsBase64(squeezedTensor);
               squeezedTensor.dispose();
               (<MultiArgProgress<'src'>>progress)(percent, src);
             }
@@ -422,10 +433,24 @@ export async function* upscale<P extends Progress<O, PO>, O extends ResultFormat
     return <UpscaleResponse<O>>postprocessedPixels;
   }
 
-  const base64Src = await tensorAsBase64(postprocessedPixels);
+  const base64Src = tensorAsBase64(postprocessedPixels);
   postprocessedPixels.dispose();
   return <UpscaleResponse<O>>base64Src;
 }
+
+export const makeTick = (signal: AbortSignal) => async (result?: YieldedIntermediaryValue) => {
+  await tf.nextFrame();
+  if (isAborted(signal)) {
+    // only dispose tensor if we are aborting; if aborted, the called function will have
+    // no opportunity to dispose of its memory
+    if (Array.isArray(result)) {
+      result.forEach(r => r.dispose());
+    } else if (isTensor(result)) {
+      result.dispose();
+    }
+    throw new AbortError();
+  }
+};
 
 interface UpscaleInternalArgs {
   model: tf.LayersModel,
@@ -438,19 +463,7 @@ export async function cancellableUpscale<P extends Progress<O, PO>, O extends Re
     signal: AbortSignal;
   },
 ): Promise<UpscaleResponse<O>> {
-  const tick = async (result?: YieldedIntermediaryValue) => {
-    await tf.nextFrame();
-    if (isAborted(signal) || isAborted(internalArgs.signal)) {
-      // only dispose tensor if we are aborting; if aborted, the called function will have
-      // no opportunity to dispose of its memory
-      if (Array.isArray(result)) {
-        result.forEach(r => r.dispose());
-      } else if (isTensor(result)) {
-        result.dispose();
-      }
-      throw new AbortError();
-    }
-  };
+  const tick = makeTick(signal || internalArgs.signal);
   await tick();
   const upscaledPixels = await wrapGenerator(upscale(
     input,

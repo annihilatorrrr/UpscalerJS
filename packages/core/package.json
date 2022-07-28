@@ -1,6 +1,6 @@
 {
   "name": "@upscalerjs/core",
-  "version": "1.0.0-canary.0",
+  "version": "1.0.0-beta.3",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -9,9 +9,13 @@
     "dist/**/*"
   ],
   "scripts": {
+    "test": "",
+    "lint": "eslint -c .eslintrc.js src --ext .ts",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm build && pnpm validate:build",
+    "validate:build": "ts-node ../../scripts/validate-build.ts packages/core",
     "build": "tsc"
   },
   "dependencies": {
-    "@tensorflow/tfjs-core": "^3.18.0"
+    "@tensorflow/tfjs-core": "^3.19.0"
   }
 }

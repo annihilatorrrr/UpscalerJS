@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "compilerOptions": {
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -18,6 +19,9 @@
     "rootDir": "./src",
     "outDir": "./dist",
   },
+=======
+  "extends": "../tsconfig.json",
+>>>>>>> main
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "**/*.test.ts"]
 }

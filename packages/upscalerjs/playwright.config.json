@@ -1,0 +1,7 @@
+{
+  "cov": true,
+  "browser": "chromium",
+  "input": [
+    "src/image.browser.test.ts"
+  ]
+}

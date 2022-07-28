@@ -1,53 +1,42 @@
 /****
  * Tests that different build outputs all function correctly
  */
-import http from 'http';
 import { checkImage } from '../../lib/utils/checkImage';
-import { prepareScriptBundleForUMD, DIST as SCRIPT_DIST } from '../../lib/umd/prepare';
-import { startServer } from '../../lib/shared/server';
-import { prepareScriptBundleForESM, bundleWebpack, DIST as WEBPACK_DIST } from '../../lib/esm-webpack/prepare';
-import puppeteer from 'puppeteer';
+import { prepareScriptBundleForUMD, DIST as UMD_DIST, mockCDN as umdMockCDN } from '../../lib/umd/prepare';
+import { prepareScriptBundleForESM, bundleWebpack, DIST as WEBPACK_DIST, mockCDN as webpackMockCDN } from '../../lib/esm-webpack/prepare';
 import * as tf from '@tensorflow/tfjs';
 import Upscaler, { ModelDefinition } from 'upscaler';
+import { BrowserTestRunner, MockCDN } from '../utils/BrowserTestRunner';
 
 const JEST_TIMEOUT_IN_SECONDS = 120;
 jest.setTimeout(JEST_TIMEOUT_IN_SECONDS * 1000);
 jest.retryTimes(1);
 
 describe('Build Integration Tests', () => {
-  let server: http.Server;
-  let browser: puppeteer.Browser | undefined;
-  let page: puppeteer.Page | undefined;
-
-  const PORT = 8099;
-
-  afterEach(async function afterEach() {
-    const stopServer = (): Promise<void | Error> => new Promise((resolve) => {
-      if (server) {
-        server.close(resolve);
-      } else {
-        resolve();
-      }
-    });
-    await Promise.all([
-      stopServer(),
-      browser ? browser.close() : undefined,
-    ]);
-    browser = undefined;
-    page = undefined;
+  const testRunner = new BrowserTestRunner({
+    showWarnings: true,
   });
 
-  const startBrowser = async () => {
-    browser = await puppeteer.launch();
-    page = await browser.newPage();
-    await page.goto(`http://localhost:${PORT}`);
+  afterEach(async function afterEach() {
+    await testRunner.afterEach(async () => {
+      await testRunner.stopServer();
+    });
+  }, 5000);
+
+  const start = async (bundle: () => Promise<void>, dist: string, mockCDN: MockCDN) => {
+    await bundle();
+    testRunner.mockCDN = mockCDN;
+    await Promise.all([
+      testRunner.startServer(dist),
+      testRunner.startBrowser(),
+    ]);
+    await testRunner.navigateToServer(null);
+    return testRunner.page;
   }
 
   it("upscales using a UMD build via a script tag", async () => {
-    await prepareScriptBundleForUMD();
-    server = await startServer(PORT, SCRIPT_DIST);
-    await startBrowser();
-    const result = await page!.evaluate(() => {
+    const page = await start(prepareScriptBundleForUMD, UMD_DIST, umdMockCDN);
+    const result = await page.evaluate(() => {
       const Upscaler = window['Upscaler'];
       const upscaler = new Upscaler({
         model: {
@@ -61,10 +50,8 @@ describe('Build Integration Tests', () => {
   });
 
   it("upscales using a UMD build with a specified model", async () => {
-    await prepareScriptBundleForUMD();
-    server = await startServer(PORT, SCRIPT_DIST);
-    await startBrowser();
-    const result = await page!.evaluate(() => {
+    const page = await start(prepareScriptBundleForUMD, UMD_DIST, umdMockCDN);
+    const result = await page.evaluate(() => {
       const Upscaler = window['Upscaler'];
       const pixelUpsampler = window['PixelUpsampler4x'];
       const upscaler = new Upscaler({
@@ -76,12 +63,11 @@ describe('Build Integration Tests', () => {
   });
 
   it("upscales using an ESM build using Webpack", async () => {
-    await prepareScriptBundleForESM();
-    await bundleWebpack();
-    server = await startServer(PORT, WEBPACK_DIST);
-    await startBrowser();
-    await page!.waitForFunction('document.title.endsWith("| Loaded")');
-    const result = await page!.evaluate(() => {
+    const page = await start(async () => {
+      await prepareScriptBundleForESM();
+      await bundleWebpack();
+    }, WEBPACK_DIST, webpackMockCDN);
+    const result = await page.evaluate(() => {
       const Upscaler = window['Upscaler'];
       const upscaler = new Upscaler({
         model: {

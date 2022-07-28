@@ -7,6 +7,8 @@ import rimraf from 'rimraf';
 import findAllPackages from '../../../scripts/package-scripts/find-all-packages';
 import { getPackageJSON, writePackageJSON } from '../../../scripts/package-scripts/utils/packages';
 import callExec from "../utils/callExec";
+// import zlib from 'zlib';
+import tar from 'tar';
 
 const ROOT = path.join(__dirname, '../../..');
 
@@ -95,23 +97,24 @@ const installLocalPackageWithNewName = async (src: string, dest: string, localNa
 }
 
 const npmPack = async (src: string): Promise<string> => {
-    let outputName = '';
-    await callExec('npm pack --quiet', {
-      cwd: src,
-    }, chunk => {
-      outputName = chunk;
-    });
+  let outputName = '';
+  await callExec('npm pack --quiet', {
+    cwd: src,
+  }, chunk => {
+    outputName = chunk;
+  });
 
-    outputName = outputName.trim();
+  outputName = outputName.trim();
 
-    if (!outputName.endsWith('.tgz')) {
-      throw new Error(`Unexpected output name: ${outputName}`)
-    }
+  if (!outputName.endsWith('.tgz')) {
+    throw new Error(`Unexpected output name: ${outputName}`)
+  }
 
-    return path.resolve(src, outputName);
+  return path.resolve(src, outputName);
 };
 
-const unTar = (cwd: string, fileName: string) => callExec(`tar zxf ${fileName}`, {
+const unTar = (cwd: string, fileName: string) => tar.extract({
+  file: fileName,
   cwd,
 });
 
@@ -211,8 +214,8 @@ export const installLocalPackage = async (src: string, dest: string) => {
 };
 
 type WithTmpDirFn = (tmp: string) => Promise<void>;
-export const withTmpDir = async (callback: WithTmpDirFn) => {
-  let tmpDir = await getTmpDir();
+export const withTmpDir = async (callback: WithTmpDirFn, rootDir?: string) => {
+  let tmpDir = await getTmpDir(rootDir);
   if (!fs.existsSync(tmpDir)) {
     throw new Error(`Tmp directory ${tmpDir} was not created`);
   }
@@ -232,8 +235,8 @@ export const withTmpDir = async (callback: WithTmpDirFn) => {
   }
 };
 
-const getTmpDir = async (): Promise<string> => {
-  const folder = path.resolve(ROOT, 'tmp', getCryptoName(`${Math.random()}`));
+const getTmpDir = async (root = path.resolve(ROOT, 'tmp')): Promise<string> => {
+  const folder = path.resolve(root, getCryptoName(`${Math.random()}`));
   await mkdirp(folder);
   return folder;
 };

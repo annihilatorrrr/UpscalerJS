@@ -1,11 +1,10 @@
 import { tf, } from './dependencies.generated';
-import { ROOT, } from './constants';
 import type { Progress, MultiArgProgress, SingleArgProgress, ResultFormat, } from './types';
 import type { ModelDefinitionFn, ModelDefinition, ModelDefinitionObjectOrFn, } from '@upscalerjs/core';
 
 export const isString = (pixels: unknown): pixels is string => typeof pixels === 'string';
 
-function makeIsNDimensionalTensor<T extends tf.Tensor>(rank: number) {
+export function makeIsNDimensionalTensor<T extends tf.Tensor>(rank: number) {
   function fn(pixels: tf.Tensor): pixels is T {
     try {
       return pixels.shape.length === rank;
@@ -16,22 +15,21 @@ function makeIsNDimensionalTensor<T extends tf.Tensor>(rank: number) {
   return fn;
 }
 
-// const ERROR_URL_EXPLICIT_SCALE_REQUIRED =
-//   'https://thekevinscott.github.io/UpscalerJS/#/?id=you-must-provide-an-explicit-scale';
-// const ERROR_URL_EXPLICIT_SCALE_DISALLOWED =
-//   'https://thekevinscott.github.io/UpscalerJS/#/?id=you-are-requesting-the-pretrained-model-but-are-providing-an-explicit-scale';
-
+export const MISSING_MODEL_DEFINITION_ERROR = new Error('You must provide a model definition');
+export const MISSING_MODEL_DEFINITION_PATH_ERROR = new Error('You must provide a path for a model definition');
+export const MISSING_MODEL_DEFINITION_SCALE_ERROR = new Error('You must provide a scale for a model definition');
+export const LOGICAL_ERROR = new Error('There is a bug with the upscaler code. Please report this.');
 export function getModelDefinitionError(modelDefinition?: ModelDefinition) {
   if (!modelDefinition) {
-    return new Error('You must provide a model definition');
+    return MISSING_MODEL_DEFINITION_ERROR;
   }
   if (!modelDefinition.path) {
-    return new Error('No model path provided');
+    return MISSING_MODEL_DEFINITION_PATH_ERROR;
   }
   if (!modelDefinition.scale) {
-    return new Error('No model scale provided');
+    return MISSING_MODEL_DEFINITION_SCALE_ERROR;
   }
-  return new Error('Bug with code');
+  return LOGICAL_ERROR;
 }
 
 export const isValidModelDefinition = (modelDefinition?: ModelDefinition): modelDefinition is ModelDefinition => {
@@ -54,14 +52,6 @@ export const isThreeDimensionalTensor = makeIsNDimensionalTensor<tf.Tensor3D>(3)
 export const isTensor = (input: unknown): input is tf.Tensor => {
   return input instanceof tf.Tensor;
 };
-
-const MODEL_DIR = 'models';
-
-export const buildURL = (modelFolder: string) =>
-  `${ROOT}/${MODEL_DIR}/${modelFolder}/model.json`;
-
-export const buildConfigURL = (modelFolder: string) =>
-  `${ROOT}/${MODEL_DIR}/${modelFolder}/config.json`;
 
 export const warn = (msg: string | string[]) => {
   console.warn(Array.isArray(msg) ? msg.join('\n') : msg);// skipcq: JS-0002
@@ -99,3 +89,15 @@ export async function wrapGenerator<T = unknown, TReturn = any, TNext = unknown>
 }
 
 export function isModelDefinitionFn (modelDefinition: ModelDefinitionObjectOrFn): modelDefinition is ModelDefinitionFn { return typeof modelDefinition === 'function'; }
+
+export const tensorAsClampedArray = (tensor: tf.Tensor3D) => tf.tidy(() => {
+  const [height, width,] = tensor.shape;
+  const fill = tf.fill([height, width,], 255).expandDims(2);
+  return tensor.clipByValue(0, 255).concat([fill,], 2).dataSync();
+});
+
+export const getModel = (modelDefinition: ModelDefinitionObjectOrFn) => {
+  /* eslint-disable @typescript-eslint/no-unsafe-call */
+  /* eslint-disable @typescript-eslint/no-unsafe-return */
+  return isModelDefinitionFn(modelDefinition) ? modelDefinition(tf) : modelDefinition;
+};

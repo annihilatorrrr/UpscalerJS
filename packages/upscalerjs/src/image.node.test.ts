@@ -1,11 +1,27 @@
-import fs from 'fs';
+import { readFileSync as _readFileSync } from 'fs';
 import http from 'http';
 import path from 'path';
-import { getImageAsTensor, getInvalidTensorError, } from './image.node';
+import { 
+  getImageAsTensor, 
+  getInvalidInput,
+  tensorAsBase64,
+  getInvalidTensorError,
+  getInvalidImageSrcInput,
+} from './image.node';
+import { mockFn } from '../../../test/lib/shared/mockers';
 import { tf } from './dependencies.generated';
 import { startServer } from '../../../test/lib/shared/server';
+jest.mock('fs', () => {
+  const { readFileSync, ...rest } = jest.requireActual('fs');
+  return { 
+    ...rest,
+    readFileSync: jest.fn(readFileSync),
+  }
+});
 
 jest.setTimeout(1000);
+
+const readFileSync = mockFn(_readFileSync);
 
 const SRC = path.resolve(__dirname);
 const FIXTURES = path.resolve(SRC, '../../../test/__fixtures__');
@@ -20,8 +36,14 @@ const stopServer = (server: http.Server): Promise<void | undefined | Error> => n
   }
 });
 
+const FLOWER = path.resolve(FIXTURES, 'flower-small.png');
+const image = readFileSync(FLOWER);
+
 describe('Image', () => {
   let server: http.Server;
+  beforeEach(() => {
+    readFileSync.mockClear();
+  })
   beforeAll(async () => {
     server = await startServer(PORT, FIXTURES);
   })
@@ -30,21 +52,16 @@ describe('Image', () => {
   })
   describe('getImageAsTensor', () => {
     it('handles a uint array', async () => {
-      const FLOWER = path.resolve(FIXTURES, 'flower-small.png');
-      const image = new Uint8Array(fs.readFileSync(FLOWER));
       const result = await getImageAsTensor(image);
       expect(result.shape).toEqual([1,16,16,4,]);
     });
 
     it('handles a buffer', async () => {
-      const FLOWER = path.resolve(FIXTURES, 'flower-small.png');
-      const image = fs.readFileSync(FLOWER);
       const result = await getImageAsTensor(image);
       expect(result.shape).toEqual([1,16,16,4,]);
     });
 
     it('handles a local string path to a file', async () => {
-      const FLOWER = path.resolve(FIXTURES, 'flower-small.png');
       const result = await getImageAsTensor(FLOWER);
       expect(result.shape).toEqual([1,16,16,4,]);
     });
@@ -74,5 +91,28 @@ describe('Image', () => {
         .rejects
         .toThrow(getInvalidTensorError(input));
     });
+
+    it('handles invalid input', async () => {
+      await expect(() => getImageAsTensor(123 as unknown as tf.Tensor3D))
+        .rejects
+        .toThrow(getInvalidInput(123));
+    });
+
+    it('handles an invalid file path', async () => {
+      readFileSync.mockImplementation((filename) => {
+        throw new Error(`no such file or directory, open ${filename}`);
+      })
+      const filename = 'foo';
+      await expect(() => getImageAsTensor(filename))
+        .rejects
+        .toThrow(getInvalidImageSrcInput(filename));
+    });
+  });
+});
+
+describe('tensorAsBase64', () => {
+  it('returns a tensor as base64', () => {
+    const t: tf.Tensor3D = tf.ones([2,2,3]);
+    expect(tensorAsBase64(t)).toEqual('AQEB/wEBAf8BAQH/AQEB/w==');
   });
 });

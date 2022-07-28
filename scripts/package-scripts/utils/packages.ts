@@ -3,10 +3,18 @@ import path from 'path';
 import findAllPackages from '../find-all-packages';
 import { JSONSchemaForNPMPackageJsonFiles } from '@schemastore/package';
 
+interface FakeExports {
+  [index: string]: string | FakeExports;
+}
+
+export type JSONSchema = JSONSchemaForNPMPackageJsonFiles & {
+  exports: FakeExports;
+};
+
 const DIRNAME = __dirname;
 
 export type Package = 'UpscalerJS' | 'Core' | 'Models' | 'Test' | 'Examples' | 'Root' | 'Wrapper';
-export type TransformPackageJsonFn = (packageJSON: JSONSchemaForNPMPackageJsonFiles, dir: string) => JSONSchemaForNPMPackageJsonFiles;
+export type TransformPackageJsonFn = (packageJSON: JSONSchema, dir: string) => JSONSchema;
 export type PackageUpdaterLogger = (file: string) => (string | undefined);
 
 export const UPSCALER_JS = 'UpscalerJS';
@@ -48,7 +56,7 @@ export const writePackageJSON = (file: string, contents: Record<string, string |
   fs.writeFileSync(getPackageJSONPath(file), stringifiedContents);
 };
 
-export const getPackageJSON = (file: string): JSONSchemaForNPMPackageJsonFiles => JSON.parse(fs.readFileSync(getPackageJSONPath(file), 'utf-8'));
+export const getPackageJSON = (file: string): JSONSchema => JSON.parse(fs.readFileSync(getPackageJSONPath(file), 'utf-8'));
 
 const defaultTransform: TransformPackageJsonFn = (packageJSON) => packageJSON;
 
@@ -71,16 +79,16 @@ export const updateSinglePackage = async (dir: string, transform: TransformPacka
   }
 };
 
-export const getPackageJSONValue = (packageJSON: JSONSchemaForNPMPackageJsonFiles, depKey: string) => {
-  return depKey.split('.').reduce((json, key) => json[key], packageJSON);
+export const getPackageJSONValue = (packageJSON: JSONSchema, depKey: string) => {
+  return depKey.split('.').reduce((json, key) => json?.[key], packageJSON);
 }
 
-type Value = JSONSchemaForNPMPackageJsonFiles[keyof JSONSchemaForNPMPackageJsonFiles];
-export const updatePackageJSONForKey = (packageJSON: JSONSchemaForNPMPackageJsonFiles, key: string, val: Value) => {
-  return getObj(packageJSON, key.split('.'), val)
+type Value = JSONSchema[keyof JSONSchema];
+export const updatePackageJSONForKey = (packageJSON: JSONSchema, key: string, val: Value): JSONSchema => {
+  return getObj<JSONSchema>(packageJSON, key.split('.'), val);
 }
 
-const getObj = (obj: Record<string, any>, parts: string[], val: Value): Record<string, any> => {
+function getObj<T extends Record<string, any>>(obj: T, parts: string[], val: Value): T {
   if (parts.length === 1) {
     return {
       ...obj,

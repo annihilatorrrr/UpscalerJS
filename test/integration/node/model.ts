@@ -1,93 +1,107 @@
+import path from 'path';
 import { checkImage } from '../../lib/utils/checkImage';
 import { prepareScriptBundleForNodeCJS, GetContents, testNodeScript } from '../../lib/node/prepare';
-import { LOCAL_UPSCALER_NAME } from '../../lib/node/constants';
+import { LOCAL_UPSCALER_NAME, LOCAL_UPSCALER_NAMESPACE } from '../../lib/node/constants';
+import { getAllAvailableModelPackages, getAllAvailableModels } from '../../../scripts/package-scripts/utils/getAllAvailableModels';
+import { DefinedDependencies, Dependencies, Main, NodeTestRunner } from '../utils/NodeTestRunner';
+import { ModelDefinition } from '../../../packages/upscalerjs/src';
 
 const JEST_TIMEOUT = 60 * 1000;
 jest.setTimeout(JEST_TIMEOUT * 1); // 60 seconds timeout
 
-const writeScript = (getModelPath: string): GetContents => (outputFile: string) => `
-const tf = require('@tensorflow/tfjs-node');
-const Upscaler = require('${LOCAL_UPSCALER_NAME}/node');
-const path = require('path');
-const fs = require('fs');
-const base64ArrayBuffer = require('../../utils/base64ArrayBuffer')
-
-const FIXTURES = path.join(__dirname, '../../../__fixtures__');
-const IMG = path.join(FIXTURES, 'flower-small.png');
-
-const getUpscaler = (model) => {
-  if (model) {
-    return new Upscaler({
-      model: {
-        path: model,
-        scale: 4,
-      }
-    });
-  }
-
-  return new Upscaler();
-}
-
-// Returns a PNG-encoded UInt8Array
-const upscaleImageToUInt8Array = async (model, filename) => {
-  const upscaler = getUpscaler(model);
-  const file = fs.readFileSync(filename)
-  const image = tf.node.decodeImage(file, 3)
-  return await upscaler.upscale(image, {
+const main: Main = async (deps) => {
+  const {
+    Upscaler,
+    tf,
+    base64ArrayBuffer,
+    flower,
+    model,
+  } = deps;
+  const upscaler = new Upscaler({
+    model,
+  });
+  const bytes = new Uint8Array(flower);
+  const tensor = tf.tensor(bytes).reshape([16, 16, 3]);
+  const result = await upscaler.upscale(tensor, {
     output: 'tensor',
     patchSize: 64,
     padding: 6,
   });
-}
-
-const main = async (model) => {
-  const tensor = await upscaleImageToUInt8Array(model, IMG);
-  const upscaledImage = await tf.node.encodePng(tensor)
+  tensor.dispose();
+  // because we are requesting a tensor, it is possible that the tensor will
+  // contain out-of-bounds pixels; part of the value of this test is ensuring
+  // that those values are clipped in a post-process step.
+  const upscaledImage = await tf.node.encodePng(result);
+  result.dispose();
   return base64ArrayBuffer(upscaledImage);
-}
-
-${getModelPath}
-
-(async () => {
-  const data = await main(getModelPath());
-  fs.writeFileSync('${outputFile}', data);
-})();
-`;
+};
 
 describe('Model Loading Integration Tests', () => {
+  const testRunner = new NodeTestRunner({
+    main,
+    trackTime: false,
+    dependencies: {
+      'tf': '@tensorflow/tfjs-node',
+      'Upscaler': `${LOCAL_UPSCALER_NAME}/node`,
+      'fs': 'fs',
+      'base64ArrayBuffer': path.resolve(__dirname, '../../lib/utils/base64ArrayBuffer'),
+      'flower': path.resolve(__dirname, '../../__fixtures__', 'flower-small-tensor.json'),
+    },
+  });
   beforeAll(async () => {
-    await prepareScriptBundleForNodeCJS();
+    await testRunner.beforeAll(prepareScriptBundleForNodeCJS);
   });
 
   it("loads the default model", async () => {
-    const result = await testNodeScript(writeScript(`
-const getModelPath = () => undefined;
-    `));
+    const result = await testRunner.test({
+      globals: {
+        model: 'undefined',
+      },
+    });
     expect(result).not.toEqual('');
     const formattedResult = `data:image/png;base64,${result}`;
     checkImage(formattedResult, "upscaled-4x-gans.png", 'diff.png');
   });
 
   it("loads a locally exposed model via file:// path", async () => {
-    const result = await testNodeScript(writeScript(`
-const getModelPath = () => {
-  const MODEL_PATH = path.join(FIXTURES, 'pixelator/pixelator.json');
-  return 'file://' + path.resolve(MODEL_PATH);
-}
-    `));
+    const result = await testRunner.test({
+      globals: {
+        model: JSON.stringify({
+          path: 'file://' + path.join(__dirname, '../../__fixtures__', 'pixelator/pixelator.json'),
+          scale: 4,
+        }),
+      },
+    });
     expect(result).not.toEqual('');
     const formattedResult = `data:image/png;base64,${result}`;
     checkImage(formattedResult, "upscaled-4x-pixelator.png", 'diff.png');
   });
 
-  it("loads a model via HTTP", async () => {
-    const result = await testNodeScript(writeScript(`
-const getModelPath = () => {
-  return 'https://unpkg.com/@upscalerjs/models@0.10.0-canary.1/models/pixelator/model.json';
-}
-    `));
-    expect(result).not.toEqual('');
-    const formattedResult = `data:image/png;base64,${result}`;
-    checkImage(formattedResult, "upscaled-4x-pixelator.png", 'diff.png');
+  describe('Test specific model implementations', () => {
+    const SPECIFIC_PACKAGE: string | undefined = undefined;
+    const SPECIFIC_MODEL: string | undefined = undefined;
+    getAllAvailableModelPackages().filter(m => SPECIFIC_PACKAGE === undefined || m === SPECIFIC_PACKAGE).map(packageName => {
+      describe(packageName, () => {
+        const models = getAllAvailableModels(packageName);
+        models.filter(m => SPECIFIC_MODEL === undefined || m.esm === SPECIFIC_MODEL).forEach(({ cjs }) => {
+          const cjsName = cjs || 'index';
+          it(`upscales with ${packageName}/${cjsName} as cjs`, async () => {
+            const importPath = `${LOCAL_UPSCALER_NAMESPACE}/${packageName}${cjsName === 'index' ? '' : `/${cjsName}`}`;
+            const result = await testRunner.test({
+              dependencies: {
+                customModel: importPath,
+              },
+              globals: {
+                model: 'customModel',
+              }
+            });
+
+            expect(result).not.toEqual('');
+            const formattedResult = `data:image/png;base64,${result}`;
+            checkImage(formattedResult, `${packageName}/${cjsName}/result.png`, `${cjsName}/diff.png`, `${cjsName}/upscaled.png`);
+          });
+        });
+      });
+    });
   });
 });

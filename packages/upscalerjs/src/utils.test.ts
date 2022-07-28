@@ -1,6 +1,8 @@
-import * as tf from '@tensorflow/tfjs';
-import { ModelDefinition } from '@upscalerjs/core';
+import * as tf from '@tensorflow/tfjs-node';
+import { ModelDefinition, ModelDefinitionFn } from '@upscalerjs/core';
 import { 
+  getModelDefinitionError,
+  makeIsNDimensionalTensor,
   wrapGenerator, 
   isSingleArgProgress, 
   isMultiArgTensorProgress, 
@@ -8,9 +10,16 @@ import {
   isFourDimensionalTensor, 
   isThreeDimensionalTensor, 
   isTensor, 
+  isValidModelDefinition,
   warn, 
   isAborted,
   registerCustomLayers,
+  tensorAsClampedArray,
+  MISSING_MODEL_DEFINITION_ERROR,
+  MISSING_MODEL_DEFINITION_PATH_ERROR,
+  MISSING_MODEL_DEFINITION_SCALE_ERROR,
+  LOGICAL_ERROR,
+  getModel,
 } from './utils';
 
 jest.mock('@tensorflow/tfjs', () => ({
@@ -19,6 +28,38 @@ jest.mock('@tensorflow/tfjs', () => ({
     registerClass: jest.fn(),
   },
 }));
+
+describe('makeIsNDimensionalTensor', () => {
+  it('checks for a 1-dimensional tensor', () => {
+    const fn = makeIsNDimensionalTensor<tf.Tensor1D>(1);
+    expect(fn(tf.tensor([1]))).toEqual(true);
+    expect(fn(tf.tensor([[1]]))).toEqual(false);
+  });
+
+  it('checks for a 2-dimensional tensor', () => {
+    const fn = makeIsNDimensionalTensor<tf.Tensor2D>(2);
+    expect(fn(tf.tensor([1]))).toEqual(false);
+    expect(fn(tf.tensor([[1]]))).toEqual(true);
+  });
+});
+
+describe('isValidModelDefinition', () => {
+  it('returns false if given an undefined', () => {
+    expect(isValidModelDefinition(undefined)).toEqual(false);
+  });
+
+  it('returns false if given path but no scale', () => {
+    expect(isValidModelDefinition({ path: 'foo', scale: undefined } as unknown as ModelDefinition )).toEqual(false);
+  });
+
+  it('returns false if given scale but no path', () => {
+    expect(isValidModelDefinition({ path: undefined, scale: 2 } as unknown as ModelDefinition )).toEqual(false);
+  });
+
+  it('returns true if given scale and path', () => {
+    expect(isValidModelDefinition({ path: 'foo', scale: 2 })).toEqual(true);
+  });
+});
 
 describe('registerCustomLayers', () => {
   it('does nothing if no custom layers are specified', () => {
@@ -247,5 +288,56 @@ describe('isTensor', () => {
   });
   it('returns false if not a tensor', () => {
     expect(isTensor([] as any)).toEqual(false);
+  });
+});
+
+describe('tensorAsClampedArray', () => {
+  it('returns an array', () => {
+    const result = tensorAsClampedArray(tf.tensor([[[2, 2, 3], [2, 1, 4], [5,5,5],[6,6,6], [7,7,7],[8,8,8]]]))
+    expect(Array.from(result)).toEqual([2,2,3,255,2,1,4,255,5,5,5,255,6,6,6,255,7,7,7,255,8,8,8,255]);
+  });
+
+  it('returns a clamped array', () => {
+    const result = tensorAsClampedArray(tf.tensor([[[-100, 2, 3], [256, 1, 4], [500,5,5],[6,6,6]]]))
+    expect(Array.from(result)).toEqual([0,2,3,255,255,1,4,255,255,5,5,255,6,6,6,255]);
+  });
+});
+
+describe('getModelDefinitionError', () => {
+  it('returns an error if no model definition is provided', () => {
+    expect(getModelDefinitionError(undefined)).toEqual(MISSING_MODEL_DEFINITION_ERROR);
+  });
+
+  it('returns an error if path is not provided', () => {
+    expect(getModelDefinitionError({ path: undefined } as unknown as ModelDefinition)).toEqual(MISSING_MODEL_DEFINITION_PATH_ERROR);
+  });
+
+  it('returns an error if scale is not provided', () => {
+    expect(getModelDefinitionError({ path: 'foo', scale: undefined } as unknown as ModelDefinition)).toEqual(MISSING_MODEL_DEFINITION_SCALE_ERROR);
+  });
+
+  it('returns a generic error otherwise', () => {
+    expect(getModelDefinitionError({ path: 'foo', scale: 2 } as unknown as ModelDefinition)).toEqual(LOGICAL_ERROR);
+  });
+})
+
+describe('getModel', () => {
+  it('returns model definition', () => {
+    const modelDefinition: ModelDefinition = {
+      path: 'foo',
+      scale: 2,
+    };
+
+    expect(getModel(modelDefinition)).toEqual(modelDefinition)
+  });
+
+  it('returns model definition from model definition fn', () => {
+    const modelDefinition: ModelDefinition = {
+      path: 'foo',
+      scale: 2,
+    };
+    const modelDefinitionFn: ModelDefinitionFn = () => modelDefinition;
+
+    expect(getModel(modelDefinitionFn)).toEqual(modelDefinition)
   });
 });

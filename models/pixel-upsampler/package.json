@@ -1,12 +1,13 @@
 {
   "name": "@upscalerjs/pixel-upsampler",
-  "version": "0.4.5",
+  "version": "1.0.0-beta.4",
   "description": "Pixel Upsampler Model for Upscaler.js",
   "scripts": {
     "scaffold:dependencies": "ts-node ../../scripts/package-scripts/scaffold-dependencies.ts --src models/pixel-upsampler --config models/scaffolder.ts",
     "lint:fix": "pnpm lint --fix",
     "lint": "pnpm scaffold:dependencies && eslint -c ../.eslintrc.js src --ext .ts",
-    "prepublishOnly": "pnpm lint && pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm build && pnpm validate:build",
+    "validate:build": "ts-node ../../scripts/validate-build.ts models/pixel-upsampler",
     "build": "ts-node ../../scripts/package-scripts/build-model.ts pixel-upsampler -o cjs -o esm -o umd"
   },
   "exports": {
@@ -42,12 +43,12 @@
     },
     ".": {
       "require": {
-        "types": "./dist/cjs/2x.d.ts",
-        "default": "./dist/cjs/2x.js"
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
       },
       "import": {
-        "types": "./dist/esm/2x.d.ts",
-        "default": "./dist/esm/2x.js"
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
       }
     }
   },
@@ -64,18 +65,18 @@
     "dist/**/*"
   ],
   "peerDependencies": {
-    "@tensorflow/tfjs": "^3.18.0"
+    "@tensorflow/tfjs": "^3.19.0"
   },
   "dependencies": {
-    "@tensorflow/tfjs-core": "^3.18.0",
-    "@tensorflow/tfjs-layers": "^3.18.0",
+    "@tensorflow/tfjs-core": "^3.19.0",
+    "@tensorflow/tfjs-layers": "^3.19.0",
     "@upscalerjs/core": "workspace:*"
   },
   "devDependencies": {
-    "@tensorflow/tfjs": "^3.18.0",
-    "@tensorflow/tfjs-node": "^3.18.0",
-    "@tensorflow/tfjs-node-gpu": "^3.18.0",
-    "seedrandom": "2.4.4"
+    "@tensorflow/tfjs": "^3.19.0",
+    "@tensorflow/tfjs-node": "^3.19.0",
+    "@tensorflow/tfjs-node-gpu": "^3.19.0",
+    "seedrandom": "3.0.5"
   },
   "author": "Kevin Scott",
   "license": "MIT"

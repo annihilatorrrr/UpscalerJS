@@ -18,7 +18,8 @@
     "scaffold:dependencies": "ts-node ../../scripts/package-scripts/scaffold-dependencies.ts --src models/esrgan-slim --config models/scaffolder.ts",
     "lint:fix": "pnpm lint --fix",
     "lint": "pnpm scaffold:dependencies && eslint -c ../.eslintrc.js src --ext .ts",
-    "prepublishOnly": "pnpm lint && pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm build && pnpm validate:build",
+    "validate:build": "ts-node ../../scripts/validate-build.ts models/esrgan-slim",
     "build": "ts-node ../../scripts/package-scripts/build-model.ts esrgan-slim -o cjs -o esm -o umd"
   },
   "keywords": [
@@ -36,18 +37,18 @@
     "dist/**/*"
   ],
   "peerDependencies": {
-    "@tensorflow/tfjs": "^3.18.0"
+    "@tensorflow/tfjs": "^3.19.0"
   },
   "dependencies": {
     "@upscalerjs/core": "workspace:*"
   },
   "devDependencies": {
-    "@tensorflow/tfjs-core": "^3.18.0",
-    "@tensorflow/tfjs-layers": "^3.18.0",
-    "@tensorflow/tfjs": "^3.18.0",
-    "@tensorflow/tfjs-node": "^3.18.0",
-    "@tensorflow/tfjs-node-gpu": "^3.18.0",
-    "seedrandom": "2.4.4"
+    "@tensorflow/tfjs-core": "^3.19.0",
+    "@tensorflow/tfjs-layers": "^3.19.0",
+    "@tensorflow/tfjs": "^3.19.0",
+    "@tensorflow/tfjs-node": "^3.19.0",
+    "@tensorflow/tfjs-node-gpu": "^3.19.0",
+    "seedrandom": "3.0.5"
   },
   "author": "Kevin Scott",
   "license": "MIT"

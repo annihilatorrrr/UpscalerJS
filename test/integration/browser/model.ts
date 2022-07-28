@@ -1,15 +1,14 @@
 /****
  * Tests that different approaches to loading a model all load correctly
  */
-import http from 'http';
 import { checkImage } from '../../lib/utils/checkImage';
-import { bundle, DIST } from '../../lib/esm-esbuild/prepare';
-import { prepareScriptBundleForUMD, DIST as UMD_DIST } from '../../lib/umd/prepare';
-import { startServer } from '../../lib/shared/server';
-import puppeteer from 'puppeteer';
+import { bundle, DIST as ESBUILD_DIST, mockCDN as esbuildMockCDN } from '../../lib/esm-esbuild/prepare';
+import { prepareScriptBundleForUMD, DIST as UMD_DIST, mockCDN as umdMockCDN } from '../../lib/umd/prepare';
 import Upscaler, { ModelDefinition } from 'upscaler';
 import * as tf from '@tensorflow/tfjs';
+import * as tfn from '@tensorflow/tfjs-node';
 import { getAllAvailableModelPackages, getAllAvailableModels } from '../../../scripts/package-scripts/utils/getAllAvailableModels';
+import { BrowserTestRunner } from '../utils/BrowserTestRunner';
 
 const TRACK_TIME = false;
 const LOG = true;
@@ -17,97 +16,29 @@ const JEST_TIMEOUT = 60 * 1000;
 jest.setTimeout(JEST_TIMEOUT); // 60 seconds timeout
 jest.retryTimes(0);
 
-const MESSAGES_TO_IGNORE = [
-  'Initialization of backend webgl failed',
-  'Could not get context for WebGL version 1',
-  'Could not get context for WebGL version 2',
-  'Error: WebGL is not supported on this device',
-  'WebGL is not supported on this device',
-];
-
-const isIgnoredMessage = (msg: string) => {
-  for (let i = 0; i < MESSAGES_TO_IGNORE.length; i++) {
-    const messageToIgnore = MESSAGES_TO_IGNORE[i];
-    if (msg.includes(messageToIgnore)) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
 describe('Model Loading Integration Tests', () => {
-  let server: http.Server;
-  let _browser: puppeteer.Browser | undefined;
-  let _page: puppeteer.Page | undefined;
-  let browser = (): puppeteer.Browser => {
-    if (!_browser) {
-      throw new Error('Browser is undefined');
-    }
-    return _browser;
-  };
-  let page = (): puppeteer.Page => {
-    if (!_page) {
-      throw new Error('Page is undefined');
-    }
-    return _page;
-  };
-
-  const PORT = 8099;
+  const testRunner = new BrowserTestRunner({
+    mockCDN: esbuildMockCDN,
+    dist: ESBUILD_DIST,
+    trackTime: TRACK_TIME,
+    log: LOG,
+  });
+  const page = () => testRunner.page;
 
   beforeAll(async function beforeAll() {
-    const start = new Date().getTime();
-
-    await bundle();
-    server = await startServer(PORT, DIST);
-
-    const end = new Date().getTime();
-    if (TRACK_TIME) {
-      console.log(`Completed pre-test scaffolding in ${Math.round((end - start) / 1000)} seconds`);
-    }
+    await testRunner.beforeAll(bundle);
   }, 60000);
 
   afterAll(async function modelAfterAll() {
-    const start = new Date().getTime();
-    const stopServer = (): Promise<void | Error> => new Promise((resolve) => {
-      if (server) {
-        server.close(resolve);
-      } else {
-        console.warn('No server found')
-        resolve();
-      }
-    });
-
-    await Promise.all([
-      stopServer(),
-    ]);
-    const end = new Date().getTime();
-    if (TRACK_TIME) {
-      console.log(`Completed post-test clean up in ${Math.round((end - start) / 1000)} seconds`);
-    }
+    await testRunner.afterAll();
   }, 10000);
 
   beforeEach(async function beforeEach() {
-    _browser = await puppeteer.launch();
-    _page = await _browser.newPage();
-    if (LOG) {
-      _page.on('console', message => {
-        const text = message.text().trim();
-        if (text.startsWith('Failed to load resource: the server responded with a status of 404')) {
-          console.log('404', text, message);
-        } else if (!isIgnoredMessage(text)) {
-          console.log('[PAGE]', text);
-        }
-      });
-    }
-    await _page.goto(`http://localhost:${PORT}`);
-    await _page.waitForFunction('document.title.endsWith("| Loaded")');
+    await testRunner.beforeEach('| Loaded');
   });
 
   afterEach(async function afterEach() {
-    await browser().close(),
-    _browser = undefined;
-    _page = undefined;
+    await testRunner.afterEach();
   });
 
   it("loads the default model", async () => {
@@ -154,35 +85,75 @@ describe('Model Loading Integration Tests', () => {
     checkImage(result, "upscaled-4x-pixelator.png", 'diff.png');
   });
 
+  it('clips a model that returns out of bound numbers when returning a base64 string src', async () => {
+    const startingPixels = [-100,-100,-100,0,0,0,255,255,255,1000,1000,1000];
+    const predictedPixels: number[] = await page().evaluate((startingPixels) => {
+      const upscaler = new window['Upscaler']({
+        model: window['pixel-upsampler']['2x'],
+      });
+      const tensor = tf.tensor(startingPixels).reshape([2,2,3]) as tf.Tensor3D;
+      const loadImage = (src: string): Promise<HTMLImageElement> => new Promise(resolve => {
+        const img = new Image();
+        img.src = src;
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+      });
+      return upscaler.upscale(tensor).then((output: string) => {
+        return loadImage(output);
+      }).then((img: HTMLImageElement) => {
+        const predictedPixels = tf.browser.fromPixels(img);
+        return Array.from(predictedPixels.dataSync());
+      });
+    }, startingPixels);
+    expect(predictedPixels.length).toEqual(4*4*3);
+    const predictedTensor = tfn.tensor(predictedPixels).reshape([4,4,3]);
+    const expectedTensor = tfn.image.resizeNearestNeighbor(tf.tensor(startingPixels).reshape([2,2,3]).clipByValue(0, 255) as tf.Tensor3D, [4,4]);
+    expect(expectedTensor.dataSync()).toEqual(predictedTensor.dataSync())
+  });
+
+  it('does not clip a model that returns out of bound numbers when returning a tensor', async () => {
+    const startingPixels = [-100,-100,-100,0,0,0,255,255,255,1000,1000,1000];
+    const predictedPixels: number[] = await page().evaluate((startingPixels) => {
+      const upscaler = new window['Upscaler']({
+        model: window['pixel-upsampler']['2x'],
+      });
+      const tensor = tf.tensor(startingPixels).reshape([2,2,3]) as tf.Tensor3D;
+      return upscaler.upscale(tensor, {
+        output: 'tensor',
+      }).then((output: tf.Tensor) => {
+        return Array.from(output.dataSync());
+      });
+    }, startingPixels);
+    expect(predictedPixels.length).toEqual(4*4*3);
+    const predictedTensor = tfn.tensor(predictedPixels).reshape([4,4,3]);
+    const expectedTensor = tfn.image.resizeNearestNeighbor(tfn.tensor(startingPixels).reshape([2,2,3]) as tf.Tensor3D, [4,4]);
+    expect(expectedTensor.dataSync()).toEqual(predictedTensor.dataSync())
+  });
+
   describe('Test specific model implementations', () => {
-    let serverUMD: http.Server;
+    const UMD_PORT = 8096;
+    const umdTestRunner = new BrowserTestRunner({
+      mockCDN: umdMockCDN,
+      dist: UMD_DIST,
+      port: UMD_PORT,
+    });
 
-    const PORT_UMD = 8098;
-
-    beforeAll(async function beforeAll() {
-      await prepareScriptBundleForUMD();
-      serverUMD = await startServer(PORT_UMD, UMD_DIST);
+    beforeAll(async function modelBeforeAll() {
+      await umdTestRunner.beforeAll(prepareScriptBundleForUMD);
     }, 20000);
 
     afterAll(async function modelAfterAll() {
-      const stopServer = (): Promise<void | Error> => new Promise((resolve) => {
-        if (serverUMD) {
-          serverUMD.close(resolve);
-        } else {
-          console.warn('No server found')
-          resolve();
-        }
-      });
+      await new Promise(r => setTimeout(r, 20000));
+      await umdTestRunner.afterAll();
+    }, 30000);
 
-      await stopServer();
-    }, 10000);
-
-    getAllAvailableModelPackages().map(packageName => {
+    getAllAvailableModelPackages().filter(m => m === 'pixel-upsampler').map(packageName => {
       describe(packageName, () => {
         const models = getAllAvailableModels(packageName);
-        models.forEach(({ esm, umd: umdName }) => {
+        models.filter(n => n.esm === '2x').forEach(({ esm, umd: umdName }) => {
           const esmName = esm || 'index';
           it(`upscales with ${packageName}/${esmName} as esm`, async () => {
+            await testRunner.navigateToServer('| Loaded');
             const result = await page().evaluate(([packageName, modelName]) => {
               if (!modelName) {
                 throw new Error(`No model name found for package ${packageName}`);
@@ -203,8 +174,9 @@ describe('Model Loading Integration Tests', () => {
           });
 
           it(`upscales with ${packageName}/${esmName} as umd`, async () => {
-            await page().goto(`http://localhost:${PORT_UMD}`);
-            const result = await page().evaluate(([umdName]) => {
+            await umdTestRunner.startBrowser();
+            await umdTestRunner.navigateToServer(null);
+            const result = await umdTestRunner.page.evaluate(([umdName]) => {
               const model: ModelDefinition = (<any>window)[umdName];
               const upscaler = new window['Upscaler']({
                 model,
@@ -212,11 +184,13 @@ describe('Model Loading Integration Tests', () => {
               return upscaler.upscale(<HTMLImageElement>document.getElementById('flower'));
             }, [umdName]);
             checkImage(result, `${packageName}/${esmName}/result.png`, 'diff.png');
+            await umdTestRunner.stopBrowser();
           });
         });
       })
     });
   });
+
 });
 
 declare global {
