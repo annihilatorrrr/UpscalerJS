@@ -8,7 +8,8 @@
   text-align: left;
   position: relative;
   overflow: hidden;
-
+  background-color: white;
+  color: black;
 }
 .heroBanner code {
   background: transparent;
