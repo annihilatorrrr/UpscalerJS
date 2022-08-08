@@ -2,12 +2,14 @@
 // Note: type annotations allow type checking and IDEs autocompletion
 
 const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
+const darkCodeTheme = require('prism-react-renderer/themes/nightOwl');
+
+const GITHUB_ROOT = 'https://github.com/thekevinscott/UpscalerJS';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Upscaler.js',
-  tagline: 'Upscale images with Javascript',
+  title: 'UpscalerJS',
+  tagline: 'Upscale images in your browser with Tensorflow.js',
   url: 'https://upscalerjs.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
@@ -87,7 +89,7 @@ const config = {
             label: 'Models',
             position: 'left',
           },
-          {to: '/blog', label: 'News', position: 'left'},
+          { to: '/blog', label: 'News', position: 'left' },
           {
             to: 'support',
             label: 'Support',
@@ -102,8 +104,6 @@ const config = {
           {
             href: 'https://github.com/thekevinscott/upscalerjs',
             'aria-label': 'Upscaler.js GitHub repository',
-            label: 'GitHub',
-            position: 'right',
           },
         ],
       },
@@ -155,6 +155,12 @@ const config = {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
         defaultLanguage: 'javascript',
+      },
+
+      colorMode: {
+        defaultMode: 'dark',
+        disableSwitch: false,
+        respectPrefersColorScheme: false,
       },
     }),
 };
