@@ -30,6 +30,7 @@
     "@tsconfig/docusaurus": "^1.0.5",
     "docusaurus": "1.14.7",
     "docusaurus-plugin-typedoc": "*",
+    "mkdirp": "^1.0.4",
     "typedoc": "^0.22.13",
     "typedoc-plugin-markdown": "*",
     "watch": "^1.0.2"
