@@ -1,17 +1,20 @@
 import path from 'path';
 import fs from 'fs';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'fs-extra';
 
+/****
+ * Constants
+ */
 const ROOT_DIR = path.resolve(__dirname, '../..');
-const EXAMPLES = path.resolve(ROOT_DIR, 'examples');
-const DOCS = path.resolve(ROOT_DIR, 'docs2/docs/usage');
+const EXAMPLES_ROOT = path.resolve(ROOT_DIR, 'examples');
+const DOCS_ROOT = path.resolve(ROOT_DIR, 'docs');
+const EXAMPLES_DOCS_DEST = path.resolve(DOCS_ROOT, 'docs/usage');
 
-const getExampleFolders = (root: string) => {
-  const examples = fs.readdirSync(root).filter(folder => {
-    return fs.statSync(path.resolve(root, folder)).isDirectory();
-  });
-  return examples;
-};
+/****
+ * Utility functions
+ */
+const isDirectory = (root: string) => (folder: string) => fs.statSync(path.resolve(root, folder)).isDirectory();
+const getExampleFolders = (root: string) => fs.readdirSync(root).filter(isDirectory(root));
 
 const getFrontmatter = (src: string): {
   title: string;
@@ -54,24 +57,28 @@ const getFrontmatter = (src: string): {
   }
 }
 
-const copyAllReadmes = (src: string, dest: string) => {
+/****
+ * Main function
+ */
+const copyAllReadmes = async (src: string, dest: string) => {
   const examples = getExampleFolders(src);
-  mkdirp(dest)
+  console.log('examples', examples);
+  await mkdirp(dest)
   const exampleBits = examples.reduce((obj, example) => {
     return {
       ...obj,
       [example]: getFrontmatter(path.resolve(src, example, 'README.md')),
     };
   }, {});
-  examples.forEach((example) => {
+  await Promise.all(examples.map(async (example) => {
     const readme = path.resolve(src, example, 'README.md');
     const { frontmatter: {
       category = 'Browser',
     } } = exampleBits[example];
     const categoryFolder = path.resolve(dest, category);
-    mkdirp(categoryFolder);
+    await mkdirp(categoryFolder.toLowerCase());
     fs.copyFileSync(readme, path.resolve(categoryFolder, `${example}.md`))
-  });
+  }));
 
   const examplesByCategory = examples.reduce((obj, example) => {
     const { frontmatter: { category = 'Browser' } } = exampleBits[example];
@@ -83,12 +90,20 @@ const copyAllReadmes = (src: string, dest: string) => {
 
   const content = `# Examples\n${Object.entries(examplesByCategory).map(([category, examples]) => {
     return `\n## ${category}\n\n${examples.map((example, i) => {
-    const { title } = exampleBits[example];
-    return `- [${title}](/docs/usage/${category}/${example})`;
-  }).join('\n')}`;
+      const { title } = exampleBits[example];
+      return `- [${title}](/docs/usage/${category}/${example})`;
+    }).join('\n')}`;
   }).join('\n')}`
 
   fs.writeFileSync(path.resolve(dest, 'index.md'), content, 'utf-8');
 }
 
-copyAllReadmes(EXAMPLES, DOCS);
+/****
+ * Functions to expose the main function as a CLI tool
+ */
+
+if (require.main === module) {
+  (async () => {
+    await copyAllReadmes(EXAMPLES_ROOT, EXAMPLES_DOCS_DEST);
+  })();
+}
