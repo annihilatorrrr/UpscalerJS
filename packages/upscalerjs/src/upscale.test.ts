@@ -20,11 +20,12 @@ import {
   GET_TENSOR_DIMENSION_ERROR_HEIGHT_IS_UNDEFINED,
   GET_TENSOR_DIMENSION_ERROR_WIDTH_IS_UNDEFINED,
   makeTick,
+  GET_UNDEFINED_TENSORS_ERROR,
 } from './upscale';
 import { tensorAsBase64 as _tensorAsBase64, getImageAsTensor as _getImageAsTensor, } from './image.generated';
 import { wrapGenerator, isTensor as _isTensor, } from './utils';
 import { ModelDefinition } from "@upscalerjs/core";
-import { Progress, } from './types';
+import { ModelPackage, Progress, } from './types';
 import { mockFn } from '../../../test/lib/shared/mockers';
 
 jest.mock('./image.generated', () => {
@@ -69,6 +70,10 @@ describe('concatTensors', () => {
     expect(result.dataSync()).toEqual(expected.dataSync());
     expect(a.isDisposed).toBe(true);
     expect(b.isDisposed).toBe(true);
+  });
+
+  it('throws if given no tensors', () => {
+    expect(() => concatTensors([undefined, undefined])).toThrowError(GET_UNDEFINED_TENSORS_ERROR());
   });
 });
 
@@ -1115,108 +1120,100 @@ describe('getRowsAndColumns', () => {
 
 describe('predict', () => {
   const origWarn = console.warn;
+  const modelDefinition = { scale: 2, } as ModelDefinition;
+
+  const SCALE = 2;
+  const model = tf.sequential();
+  model.add(tf.layers.upSampling2d({
+    size: [SCALE, SCALE],
+    dataFormat: 'channelsLast',
+    inputShape: [null, null, 3],
+  }));
+  model.compile({ loss: "meanSquaredError", optimizer: "sgd" });
+  const modelPackage: ModelPackage = {
+    model,
+    modelDefinition,
+  };
+
+  let tensor: undefined | tf.Tensor3D | tf.Tensor4D;
+
   afterEach(() => {
     console.warn = origWarn;
+
+    if (tensor !== undefined) {
+      tensor.dispose();
+    }
   });
 
+  const getWidthAndHeight = (img: tf.Tensor3D | tf.Tensor4D) => {
+    if (img.shape.length === 4) {
+      return [img.shape[1], img.shape[2]];
+    }
+    return [img.shape[0], img.shape[1]];
+  };
+
+  const checkStartingTensorAgainstUpscaledTensor = (img?: tf.Tensor3D | tf.Tensor4D, result?: tf.Tensor3D | tf.Tensor4D, scale = SCALE) => tf.tidy(() => {
+    if (!img) {
+      throw new Error('No starting tensor provided.')
+    }
+    const [height, width] = getWidthAndHeight(img);
+    const resizedOriginal = tf.image.resizeNearestNeighbor(img, [height * scale, width * scale]).expandDims(0);
+    expect(resizedOriginal.dataSync()).toEqual(result?.dataSync());
+  });
+
+  const getTensorRange = (width: number, height: number): tf.Tensor1D => tf.tidy(() => tf.range(1, 1 + (width * height), 1));
+
+  const getTensor = (height: number, width: number): tf.Tensor3D => tf.tidy(() => getTensorRange(width, height).reshape([height, width, 1]).tile([1, 1, 3]));
+
   it('should make a prediction', async () => {
-    const img: tf.Tensor3D = tf.tensor(
-      [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4,],
-      [2, 2, 3,],
-    );
-    const upscaledTensor = tf.ones([1, 2, 2, 3,]);
-    const pred = {
-      squeeze: jest.fn(() => upscaledTensor),
-      dispose: jest.fn(),
-    };
-    const model = {
-      predict: jest.fn(() => pred),
-    } as unknown as tf.LayersModel;
-    const result = await wrapGenerator(
-      predict(img.expandDims(0), {
-      }, { model, modelDefinition: { scale: 2, } as ModelDefinition })
-    );
-    expect(model.predict).toHaveBeenCalledWith(
+    const spy = jest.spyOn(model, 'predict');
+    tensor = getTensor(2, 2);
+    const result = await wrapGenerator(predict(tensor.expandDims(0), { }, modelPackage));
+    expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({
         shape: [1, 2, 2, 3,],
       }),
     );
-    expect(result).toEqual(upscaledTensor);
+    checkStartingTensorAgainstUpscaledTensor(tensor, result);
   });
 
   it('should make a prediction with a patchSize', async () => {
-    const img: tf.Tensor3D = tf.tensor(
-      [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,],
-      [2, 2, 3,],
-    );
-    const model = {
-      predict: jest.fn((pixel) => {
-        return tf.fill([2, 2, 3,], pixel.dataSync()[0]).expandDims(0);
-      }),
-    } as unknown as tf.LayersModel;
+    tensor = getTensor(2, 2);
     const result = await wrapGenerator(predict(
-      img.expandDims(0),
+      tensor.expandDims(0),
       {
         patchSize: 1,
         padding: 0,
       },
-      {
-        model,
-        modelDefinition: { scale: 2, } as ModelDefinition,
-      }
+      modelPackage,
     ));
-    expect(result.dataSync()).toEqual(
-      tf
-        .tensor([
-          [
-            [1, 1, 1,],
-            [1, 1, 1,],
-            [2, 2, 2,],
-            [2, 2, 2,],
-          ],
-          [
-            [1, 1, 1,],
-            [1, 1, 1,],
-            [2, 2, 2,],
-            [2, 2, 2,],
-          ],
-          [
-            [3, 3, 3,],
-            [3, 3, 3,],
-            [4, 4, 4,],
-            [4, 4, 4,],
-          ],
-          [
-            [3, 3, 3,],
-            [3, 3, 3,],
-            [4, 4, 4,],
-            [4, 4, 4,],
-          ],
-        ])
-        .expandDims(0)
-        .dataSync(),
-    );
+    checkStartingTensorAgainstUpscaledTensor(tensor, result);
+  });
+
+  it('should make a prediction with a patchSize and a tall image', async () => {
+    const tensor = getTensor(4, 2);
+    const result = await wrapGenerator(predict(
+      tensor.expandDims(0),
+      {
+        patchSize: 1,
+        padding: 0,
+      },
+      modelPackage,
+    ));
+    checkStartingTensorAgainstUpscaledTensor(tensor, result);
   });
 
   it('should callback with progress on patchSize', async () => {
     console.warn = jest.fn();
-    const img: tf.Tensor4D = tf.ones([4, 4, 3,]).expandDims(0);
-    const scale = 2;
+    tensor = getTensor(4, 4).expandDims(0) as tf.Tensor4D;
     const patchSize = 2;
-    const model = {
-      predict: jest.fn((pixel) => {
-        return tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0);
-      }),
-    } as unknown as tf.LayersModel;
     const progress = jest.fn();
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         patchSize,
         padding: 0,
         progress,
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
     );
     expect(progress).toHaveBeenCalledWith(0.25);
     expect(progress).toHaveBeenCalledWith(0.5);
@@ -1229,92 +1226,78 @@ describe('predict', () => {
     console.warn = jest.fn();
     const mockResponse = 'foobarbaz1';
     tensorAsBase64.mockImplementation(() => mockResponse);
-    const img: tf.Tensor4D = tf.ones([4, 2, 3,]).expandDims(0);
-    const scale = 2;
+    const tensor = getTensor(4, 4).expandDims(0) as tf.Tensor4D;
     const patchSize = 2;
-    const model = {
-      predict: jest.fn((pixel) => {
-        return tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0);
-      }),
-    } as unknown as tf.LayersModel;
     const progress = jest.fn((_1: any, _2: any) => {});
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         patchSize,
         padding: 0,
         progress,
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
     );
     expect(progress).toHaveBeenCalledWith(0.5, mockResponse);
     expect(progress).toHaveBeenCalledWith(1, mockResponse);
     expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('should invoke progress callback with slice as tensor, if output is a tensor', async () => {
+  it('should invoke progress callback with slice as tensor, if output is a tensor, for a tall image', async () => {
     console.warn = jest.fn();
     // (mockedTensorAsBase as any).default = async() => 'foobarbaz2';
-    const img: tf.Tensor4D = tf.tensor([
-      [
-        [1, 1, 1,],
-        [2, 2, 2,],
-      ],
-      [
-        [3, 3, 3,],
-        [4, 4, 4,],
-      ],
-      [
-        [5, 5, 5,],
-        [6, 6, 6],
-      ],
-      [
-        [7, 7, 7],
-        [8, 8, 8],
-      ],
-    ]).expandDims(0);
-    const scale = 2;
+    tensor = getTensor(4, 2).expandDims(0) as tf.Tensor4D;
     const patchSize = 2;
-    const model = tf.sequential();
-    model.add(tf.layers.upSampling2d({
-      size: [scale, scale], 
-      dataFormat: 'channelsLast', 
-      inputShape: [null, null, 3],
-    }))
-    model.compile({ loss: "meanSquaredError", optimizer: "sgd" });
-    const progress = jest.fn((rate: number, tensor: tf.Tensor3D) => {
-      const data = Array.from(tensor.dataSync());
+    const getSlice = (t: tf.Tensor, x: number, y: number) => tf.tidy(() => t.slice([0, x, y], [1, patchSize, patchSize]) as tf.Tensor3D);
+    const progress = jest.fn((rate: number, progressTensor: tf.Tensor3D) => {
       if (rate === .5) {
-        expect(data).toEqual([
-          ...Array(6).fill(1),
-          ...Array(6).fill(2),
-          ...Array(6).fill(1),
-          ...Array(6).fill(2),
-          ...Array(6).fill(3),
-          ...Array(6).fill(4),
-          ...Array(6).fill(3),
-          ...Array(6).fill(4),
-        ]);
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 0, 0), progressTensor));
+      } else if (rate === 1) {
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 2, 0), progressTensor));
       } else {
-        expect(data).toEqual([
-          ...Array(6).fill(5),
-          ...Array(6).fill(6),
-          ...Array(6).fill(5),
-          ...Array(6).fill(6),
-          ...Array(6).fill(7),
-          ...Array(6).fill(8),
-          ...Array(6).fill(7),
-          ...Array(6).fill(8),
-        ]);
+        throw new Error(`Unexpected rate: ${rate}`);
       }
     }) as unknown as Progress<'tensor', undefined>
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         patchSize,
         padding: 0,
         progress,
         output: 'tensor',
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
+    );
+    expect(progress).toHaveBeenCalledWith(0.5,
+      expect.objectContaining({
+        shape: [4, 4, 3,],
+      }),
+    );
+    expect(progress).toHaveBeenCalledWith(1,
+      expect.objectContaining({
+        shape: [4, 4, 3,],
+      }),
+    );
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('should invoke progress callback with slice as tensor, if output is a tensor, for a wide image', async () => {
+    console.warn = jest.fn();
+    tensor = getTensor(2, 4).expandDims(0) as tf.Tensor4D;
+    const patchSize = 2;
+    const getSlice = (t: tf.Tensor, x: number, y: number) => tf.tidy(() => t.slice([0, x, y], [1, patchSize, patchSize]) as tf.Tensor3D);
+    const progress = jest.fn((rate: number, progressTensor: tf.Tensor3D) => {
+      if (rate === .5) {
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 0, 0), progressTensor));
+      } else if (rate === 1) {
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 0, 2), progressTensor));
+      } else {
+        throw new Error(`Unexpected rate: ${rate}`);
+      }
+    }) as unknown as Progress<'tensor', undefined>
+    await wrapGenerator(
+      predict(tensor, {
+        patchSize,
+        padding: 0,
+        progress,
+        output: 'tensor',
+      }, modelPackage)
     );
     expect(progress).toHaveBeenCalledWith(0.5,
       expect.objectContaining({
@@ -1331,68 +1314,26 @@ describe('predict', () => {
 
   it('should invoke progress callback with slice as tensor, if output is a string but progressOutput is tensor', async () => {
     console.warn = jest.fn();
-    // (mockedTensorAsBase as any).default = async() => 'foobarbaz3';
-    const img: tf.Tensor4D = tf.tensor([
-      [
-        [1, 1, 1,],
-        [2, 2, 2,],
-      ],
-      [
-        [3, 3, 3,],
-        [4, 4, 4,],
-      ],
-      [
-        [5, 5, 5,],
-        [6, 6, 6],
-      ],
-      [
-        [7, 7, 7],
-        [8, 8, 8],
-      ],
-    ]).expandDims(0);
-    const scale = 2;
+    tensor = getTensor(4, 2).expandDims(0) as tf.Tensor4D;
     const patchSize = 2;
-    const model = tf.sequential();
-    model.add(tf.layers.upSampling2d({
-      size: [scale, scale], 
-      dataFormat: 'channelsLast', 
-      inputShape: [null, null, 3],
-    }))
-    model.compile({ loss: "meanSquaredError", optimizer: "sgd" });
-    const progress = jest.fn((rate: number, tensor: tf.Tensor3D) => {
-      const data = Array.from(tensor.dataSync());
+    const getSlice = (t: tf.Tensor, x: number, y: number) => tf.tidy(() => t.slice([0, x, y], [1, patchSize, patchSize]) as tf.Tensor3D);
+    const progress = jest.fn((rate: number, progressTensor: tf.Tensor3D) => {
       if (rate === .5) {
-        expect(data).toEqual([
-          ...Array(6).fill(1),
-          ...Array(6).fill(2),
-          ...Array(6).fill(1),
-          ...Array(6).fill(2),
-          ...Array(6).fill(3),
-          ...Array(6).fill(4),
-          ...Array(6).fill(3),
-          ...Array(6).fill(4),
-        ]);
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 0, 0), progressTensor));
+      } else if (rate === 1) {
+        tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(getSlice(tensor!, 2, 0), progressTensor));
       } else {
-        expect(data).toEqual([
-          ...Array(6).fill(5),
-          ...Array(6).fill(6),
-          ...Array(6).fill(5),
-          ...Array(6).fill(6),
-          ...Array(6).fill(7),
-          ...Array(6).fill(8),
-          ...Array(6).fill(7),
-          ...Array(6).fill(8),
-        ]);
+        throw new Error(`Unexpected rate: ${rate}`);
       }
     }) as Progress<'src', 'tensor'>
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         patchSize,
         padding: 0,
         progress,
         output: 'src',
         progressOutput: 'tensor',
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
     );
     expect(progress).toHaveBeenCalledWith(0.5,
       expect.objectContaining({
@@ -1409,130 +1350,140 @@ describe('predict', () => {
 
   it('should warn if provided a patchSize without padding', async () => {
     console.warn = jest.fn();
-    const img: tf.Tensor4D = tf.ones([4, 4, 3,]).expandDims(0);
-    const scale = 2;
+    tensor = getTensor(4, 4).expandDims(0) as tf.Tensor4D;
     const patchSize = 2;
-    const model = {
-      predict: jest.fn((pixel) => {
-        return tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0);
-      }),
-    } as unknown as tf.LayersModel;
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         patchSize,
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
     );
     expect(console.warn).toHaveBeenCalledWith(WARNING_UNDEFINED_PADDING);
   });
 
   it('should warn if provided a progress callback without patchSize', async () => {
     console.warn = jest.fn();
-    const img: tf.Tensor4D = tf.ones([4, 4, 3,]).expandDims(0);
-    const scale = 2;
-    const patchSize = 2;
-    const model = {
-      predict: jest.fn((pixel) => {
-        return tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0);
-      }),
-    } as unknown as tf.LayersModel;
+    tensor = getTensor(4, 4).expandDims(0) as tf.Tensor4D;
     await wrapGenerator(
-      predict(img, {
+      predict(tensor, {
         progress: () => { },
-      }, { model, modelDefinition: { scale, } as ModelDefinition })
+      }, modelPackage)
     );
     expect(console.warn).toHaveBeenCalledWith(WARNING_PROGRESS_WITHOUT_PATCH_SIZE);
   });
 
   describe('memory cleanup in predict', () => {
     it('should clear up all memory while running predict without patch size', async () => {
-      const img: tf.Tensor4D = tf.tidy(() => tf.ones([4, 4, 3,]).expandDims(0));
+      const IMG_SIZE = 2;
+      tensor = getTensor(IMG_SIZE, IMG_SIZE).expandDims(0) as tf.Tensor4D;
       const startingTensors = tf.memory().numTensors;
-      const scale = 2;
-      const patchSize = 2;
-      const model = {
-        predict: (pixel: any) => tf.tidy(() => tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0)),
-      } as unknown as tf.LayersModel;
-      const gen = predict(img, {}, { model, modelDefinition: { scale, } as ModelDefinition });
+      const gen = predict(tensor, {}, modelPackage);
       let { value, done } = await gen.next();
       expect(done).toEqual(true);
       expect(Array.isArray(value)).toEqual(false);
-      expect((value as tf.Tensor).dataSync()).toEqual(img.dataSync());
+      tf.tidy(() => checkStartingTensorAgainstUpscaledTensor(tensor, value as tf.Tensor4D));
       (value as tf.Tensor).dispose();
       expect(tf.memory().numTensors).toEqual(startingTensors);
-      img.dispose();
     });
 
     it('should clear up all memory while running predict with patch size', async () => {
       console.warn = jest.fn();
       const IMG_SIZE = 4;
-      const img: tf.Tensor4D = tf.tidy(() => tf.ones([IMG_SIZE, IMG_SIZE, 3,]).expandDims(0));
+      tensor = getTensor(IMG_SIZE, IMG_SIZE).expandDims(0) as tf.Tensor4D;
       const startingTensors = tf.memory().numTensors;
-      const scale = 2;
       const patchSize = 2;
-      const model = {
-        predict: (pixel: any) => tf.tidy(() => tf
-          .fill([patchSize * scale, patchSize * scale, 3,], pixel.dataSync()[0])
-          .expandDims(0)),
-      } as unknown as tf.LayersModel;
-      const gen = predict(img, {
+      const gen = predict(tensor, {
         patchSize,
-      }, { model, modelDefinition: { scale, } as ModelDefinition });
+      }, modelPackage);
 
-      let count = 0;
-      const getColExpectations = () => ([
-        {count: startingTensors + 2 },
-        {count: startingTensors + 3 },
-        {count: startingTensors + 3 },
-        {count: startingTensors + 3 },
-        {count: startingTensors + 3 },
-        {count: startingTensors + 2 },
-      ]);
-      const getRowExpectations = () => ([
-        // for row loop, row = 0
-        {count: startingTensors + 2 },
-        // for col loop, row = 0, col = 0
-        ...getColExpectations(),
-        // for col loop, row = 0, col = 1
-        ...getColExpectations(),
-        // for row loop, row = 0
-        {count: startingTensors + 1 },
-      ]);
-      const expectations: Array<{count: number, shouldDispose?: boolean}> = [
-        {count: startingTensors, },
-        {count: startingTensors + 1 },
+      let currentExpectationIndex = 0;
+      const expectations = [
+        // 284
+        0, 
 
-        // for row loop, row = 0
-        ...getRowExpectations(),
+        // row loop 0
+        // 289
+        0, 
 
-        // for row loop, row = 1
-        ...getRowExpectations(),
-      ];
+        // row loop 0, col loop 0
+        // 299
+        0, 
+        // 304
+        1, // 1 transitory tensor
+        // 307
+        1, // 1 transitory tensor
+        // 313
+        1, // 1 transitory tensor
+        // 333
+        1, // 1 transitory tensor
+        // 337
+        1, // 0 transitory tensors, 1 col tensor
+
+        // row loop 0, col loop 1
+        // 299
+        1, // 0 transitory tensors, 1 col tensor
+        // 304
+        2, // 1 transitory tensor, 1 col tensor
+        // 307
+        2, // 1 transitory tensor, 1 col tensor
+        // 313
+        2, // 1 transitory tensor, 1 col tensor
+        // 333
+        2, // 1 transitory tensor, 1 col tensor
+        // 337
+        1, // 0 transitory tensors, 1 col tensor
+
+        // 342
+        1, // 0 transitory tensors, 0 col tensor, 1 row tensor
+
+        // row loop 1
+        // 289
+        1, 
+
+        // row loop 1, col loop 0
+        // 299
+        1, // 0 transitory tensors, 0 col tensor, 1 row tensor
+        // 304
+        2, // 1 transitory tensor, 0 col tensor, 1 row tensor
+        // 307
+        2, // 1 transitory tensor, 0 col tensor, 1 row tensor
+        // 313
+        2, // 1 transitory tensor, 0 col tensor, 1 row tensor
+        // 333
+        2, // 1 transitory tensor, 0 col tensor, 1 row tensor
+        // 337
+        2, // 0 transitory tensor, 1 col tensor, 1 row tensor
+
+        // row loop 1, col loop 1
+        // 299
+        2, // 0 transitory tensor, 1 col tensor, 1 row tensor
+        // 304
+        3, // 1 transitory tensor, 1 col tensor, 1 row tensor
+        // 307
+        3, // 1 transitory tensor, 1 col tensor, 1 row tensor
+        // 313
+        3, // 1 transitory tensor, 1 col tensor, 1 row tensor
+        // 333
+        3, // 1 transitory tensor, 1 col tensor, 1 row tensor
+        // 337
+        2, // 0 transitory tensor, 1 col tensor, 1 row tensor
+
+        // 342
+        1, // 0 transitory tensor, 0 col tensor, 1 row tensor
+      ]
       let result = await gen.next();
       while (!result.done) {
-        const expectation = expectations[count];
-        // console.log('memory', result, count, tf.memory(), expectation);
-        expect(tf.memory().numTensors).toEqual(expectation.count);
-        if (expectation.shouldDispose) {
-          if (Array.isArray(result.value)) {
-            result.value.forEach(t => t.dispose());
-          } else if (_isTensor(result.value)) {
-            result.value.dispose();
-          }
-        }
-        count++;
+        const expectation = expectations[currentExpectationIndex];
+        const memory = tf.memory();
+        const countedTensors = memory.numTensors - startingTensors
+        // console.log('|', countedTensors, '|', expectation, '|', 'for', currentExpectationIndex, 'index', '|', result.value);
+        expect(countedTensors).toEqual(expectation);
+        currentExpectationIndex++;
         result = await gen.next()
       }
       (result.value as tf.Tensor).dispose();
-      expect(count === expectations.length);
+      expect(currentExpectationIndex === expectations.length);
       
       expect(tf.memory().numTensors).toEqual(startingTensors);
-      img.dispose();
     });
   });
 });
